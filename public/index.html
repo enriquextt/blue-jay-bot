@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="app.title">Blue Jay Bot</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/css/panel.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 data-i18n="app.title">Blue Jay Bot</h1>
+    <span id="connection" class="status"></span>
+    <label class="language">
+      <span data-i18n="app.language">Idioma</span>
+      <select id="language">
+        <option value="es">Español</option>
+        <option value="en">English</option>
+      </select>
+    </label>
+  </header>
+
+  <main>
+    <section class="card now-playing">
+      <h2 data-i18n="now.title">Sonando ahora</h2>
+      <div class="player-frame">
+        <div id="player"></div>
+      </div>
+      <div class="now-row">
+        <p id="now-title" class="now-title"></p>
+        <button id="next" type="button" data-i18n="now.next">Siguiente</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="add.title">Añadir canción</h2>
+      <form id="add-form" class="add-form">
+        <input id="add-input" type="text" required autocomplete="off" data-i18n-placeholder="add.placeholder">
+        <button type="submit" data-i18n="add.submit">Añadir</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="queue.title">Cola</h2>
+      <ol id="queue" class="queue"></ol>
+      <p id="queue-empty" class="empty" data-i18n="queue.empty">La cola está vacía.</p>
+    </section>
+  </main>
+
+  <div id="notices" class="notices" role="status" aria-live="polite"></div>
+
+  <script src="/vendor/i18next/i18next.min.js"></script>
+  <script src="/vendor/sortablejs/Sortable.min.js"></script>
+  <script type="module" src="/js/panel.js"></script>
+</body>
+</html>

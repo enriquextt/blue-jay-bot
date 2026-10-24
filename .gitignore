@@ -147,3 +147,7 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+better-sr
+.playwright-cli
+agents.md
+package-lock.json

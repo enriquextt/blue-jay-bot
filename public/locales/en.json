@@ -1,0 +1,36 @@
+{
+  "app": {
+    "title": "Blue Jay Bot",
+    "language": "Language"
+  },
+  "connection": {
+    "connecting": "Connecting…",
+    "online": "Connected",
+    "offline": "Offline, retrying…"
+  },
+  "now": {
+    "title": "Now playing",
+    "empty": "Nothing playing",
+    "next": "Next"
+  },
+  "add": {
+    "title": "Add song",
+    "placeholder": "YouTube URL or ID",
+    "submit": "Add"
+  },
+  "queue": {
+    "title": "Queue",
+    "empty": "The queue is empty.",
+    "remove": "Remove"
+  },
+  "errors": {
+    "invalidMessage": "Invalid message.",
+    "invalidUrl": "Invalid YouTube link.",
+    "trackNotFound": "The song is no longer in the queue.",
+    "serverError": "Internal server error.",
+    "playerUnavailable": "The YouTube player could not be loaded."
+  },
+  "notices": {
+    "skippedUnavailable": "Skipped, unavailable: {{title}}"
+  }
+}
