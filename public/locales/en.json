@@ -13,6 +13,9 @@
     "empty": "Nothing playing",
     "next": "Next"
   },
+  "volume": {
+    "label": "Volume"
+  },
   "add": {
     "title": "Add song",
     "placeholder": "YouTube URL or ID",
@@ -32,5 +35,47 @@
   },
   "notices": {
     "skippedUnavailable": "Skipped, unavailable: {{title}}"
+  },
+  "chat": {
+    "noPermission": "@{{user}}, only moderators can use that command.",
+    "sr": {
+      "usage": "@{{user}}, use !sr followed by a YouTube link or the song name.",
+      "invalid": "@{{user}}, that YouTube link is not valid.",
+      "added": "@{{user}}, \"{{title}}\" added at position {{position}}.",
+      "playingNow": "@{{user}}, \"{{title}}\" is playing now.",
+      "searchDisabled": "@{{user}}, search by title is not enabled; use a YouTube link.",
+      "notFound": "@{{user}}, I found no song for \"{{query}}\".",
+      "searchFailed": "@{{user}}, the song could not be searched right now. Try a link."
+    },
+    "queue": {
+      "empty": "Nothing is playing and the queue is empty.",
+      "onlyCurrent": "Now playing: {{current}}. No more songs in the queue.",
+      "summary": "Now playing: {{current}}. Up next: {{next}}"
+    },
+    "when": {
+      "none": "@{{user}}, you have no pending songs.",
+      "playing": "@{{user}}, your song \"{{title}}\" is playing now.",
+      "position_one": "@{{user}}, \"{{title}}\" plays after {{count}} song.",
+      "position_other": "@{{user}}, \"{{title}}\" plays after {{count}} songs."
+    },
+    "skip": {
+      "nothing": "There is no song to skip.",
+      "done": "Skipped: {{title}}"
+    },
+    "voteskip": {
+      "nothing": "There is no song to skip.",
+      "already": "@{{user}}, you already voted to skip this song.",
+      "voted": "@{{user}} voted to skip the song ({{votes}}/{{needed}}).",
+      "skipped": "Enough votes ({{needed}}). Skipped: {{title}}"
+    },
+    "wrongsong": {
+      "none": "@{{user}}, you have no request to remove.",
+      "removed": "@{{user}}, your request \"{{title}}\" was removed."
+    },
+    "volume": {
+      "current": "Volume: {{volume}}%.",
+      "set": "Volume set to {{volume}}%.",
+      "invalid": "@{{user}}, the volume must be a whole number from 0 to 100."
+    }
   }
 }

@@ -13,6 +13,9 @@
     "empty": "Nada sonando",
     "next": "Siguiente"
   },
+  "volume": {
+    "label": "Volumen"
+  },
   "add": {
     "title": "Añadir canción",
     "placeholder": "URL o ID de YouTube",
@@ -32,5 +35,47 @@
   },
   "notices": {
     "skippedUnavailable": "Saltada, no disponible: {{title}}"
+  },
+  "chat": {
+    "noPermission": "@{{user}}, solo los moderadores pueden usar ese comando.",
+    "sr": {
+      "usage": "@{{user}}, usa !sr seguido de un enlace de YouTube o del nombre de la canción.",
+      "invalid": "@{{user}}, ese enlace de YouTube no es válido.",
+      "added": "@{{user}}, «{{title}}» añadida en la posición {{position}}.",
+      "playingNow": "@{{user}}, «{{title}}» suena ahora.",
+      "searchDisabled": "@{{user}}, la búsqueda por título no está activada; usa un enlace de YouTube.",
+      "notFound": "@{{user}}, no encontré ninguna canción para «{{query}}».",
+      "searchFailed": "@{{user}}, no se pudo buscar la canción ahora mismo. Prueba con un enlace."
+    },
+    "queue": {
+      "empty": "No hay nada sonando ni en la cola.",
+      "onlyCurrent": "Suena: {{current}}. No hay más canciones en la cola.",
+      "summary": "Suena: {{current}}. Siguientes: {{next}}"
+    },
+    "when": {
+      "none": "@{{user}}, no tienes ninguna canción pendiente.",
+      "playing": "@{{user}}, tu canción «{{title}}» suena ahora.",
+      "position_one": "@{{user}}, «{{title}}» suena después de {{count}} canción.",
+      "position_other": "@{{user}}, «{{title}}» suena después de {{count}} canciones."
+    },
+    "skip": {
+      "nothing": "No hay ninguna canción que saltar.",
+      "done": "Saltada: {{title}}"
+    },
+    "voteskip": {
+      "nothing": "No hay ninguna canción que saltar.",
+      "already": "@{{user}}, ya has votado para saltar esta canción.",
+      "voted": "@{{user}} vota saltar la canción ({{votes}}/{{needed}}).",
+      "skipped": "Votos suficientes ({{needed}}). Saltada: {{title}}"
+    },
+    "wrongsong": {
+      "none": "@{{user}}, no tienes ninguna petición que retirar.",
+      "removed": "@{{user}}, retirada tu petición «{{title}}»."
+    },
+    "volume": {
+      "current": "Volumen: {{volume}}%.",
+      "set": "Volumen ajustado a {{volume}}%.",
+      "invalid": "@{{user}}, el volumen debe ser un número entero entre 0 y 100."
+    }
   }
 }

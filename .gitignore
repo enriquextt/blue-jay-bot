@@ -151,3 +151,7 @@ better-sr
 .playwright-cli
 agents.md
 package-lock.json
+
+# Datos locales y credenciales (nunca se commitean)
+data/
+docs/twitchApp.md

@@ -103,6 +103,24 @@ main {
   white-space: nowrap;
 }
 
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.volume input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.volume output {
+  min-width: 4ch;
+  text-align: right;
+  color: var(--muted);
+}
+
 .add-form {
   display: flex;
   gap: 8px;

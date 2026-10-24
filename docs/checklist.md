@@ -11,7 +11,7 @@ Leyenda de la columna de decisión:
 
 ## 1. Reproducción y cola
 
-- [ ] Cola de peticiones de viewers — **Mantener**
+- [x] Cola de peticiones de viewers — **Mantener**
 - [x] Reordenar la cola con arrastrar y soltar en tiempo real — **Mantener**
 - [ ] Lista base (fallback) que se reproduce en modo aleatorio cuando la cola está vacía — **Mantener**
 - [ ] Botones START / SHUFFLE para la lista base — **Mantener**
@@ -19,7 +19,7 @@ Leyenda de la columna de decisión:
 - [x] Auto-skip de vídeos no disponibles, bloqueados o eliminados — **Mantener**
 - [ ] Persistencia de la cola entre recargas — **Mantener** (changelog v1.2.3)
 - [ ] Limpiar cola y guardar cola — **Mantener**
-- [ ] Control de volumen del reproductor — **Mantener**
+- [x] Control de volumen del reproductor — **Mantener** (slider en el panel y `!volume` en el chat)
 - [ ] Favoritos (estrella) en la lista base, la cola y la canción actual; aparecen arriba y entran en START/SHUFFLE — **Mantener** (changelog v1.2.3)
 
 ## 2. Spotify
@@ -33,14 +33,14 @@ Leyenda de la columna de decisión:
 
 ## 3. Comandos de chat
 
-- [ ] `!sr [enlace/título]` para pedir canciones — **Adaptar** (hoy lo ejecuta Streamer.bot)
-- [ ] `!when` para ver cuándo sonará la próxima canción del viewer — **Mantener**
-- [ ] `!queue` para ver la canción actual y las 10 siguientes — **Mantener**
-- [ ] `!voteskip` para votar saltar la canción — **Mantener**
-- [ ] `!skip` para saltar la canción — **Mantener**
-- [ ] `!wrongsong` para retirar una petición propia — **Mantener**
-- [ ] `!volume` para ajustar el volumen — **Mantener**
-- [ ] Respuestas del bot en el idioma configurado — **Mantener**
+- [x] `!sr [enlace/título]` para pedir canciones — **Adaptar** (enlace, ID o búsqueda por título con la clave de YouTube Data API)
+- [x] `!when` para ver cuándo sonará la próxima canción del viewer — **Mantener**
+- [x] `!queue` para ver la canción actual y las 10 siguientes — **Mantener**
+- [x] `!voteskip` para votar saltar la canción — **Mantener**
+- [x] `!skip` para saltar la canción — **Mantener**
+- [x] `!wrongsong` para retirar una petición propia — **Mantener**
+- [x] `!volume` para ajustar el volumen — **Mantener** (solo moderadores)
+- [x] Respuestas del bot en el idioma configurado — **Mantener**
 - [ ] Respuesta al mismo canal de origen (Twitch, Kick o YouTube) en multistream — **Adaptar**
 - [ ] Recompensas de canal de Twitch y Kick que disparan `!sr` — **Adaptar**
 

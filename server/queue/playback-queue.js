@@ -1,11 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
+const DEFAULT_VOLUME = 50;
+
 export class PlaybackQueue {
   #items = [];
   #current = null;
+  #volume = DEFAULT_VOLUME;
 
-  add({ videoId, title }) {
-    const track = { id: randomUUID(), source: 'youtube', videoId, title };
+  add({ videoId, title, requestedBy = null }) {
+    const track = { id: randomUUID(), source: 'youtube', videoId, title, requestedBy };
     this.#items.push(track);
     if (!this.#current) this.advance();
     return track;
@@ -46,7 +49,16 @@ export class PlaybackQueue {
     return true;
   }
 
+  lastRequestBy(requestedBy) {
+    return this.#items.findLast((track) => track.requestedBy === requestedBy)
+      ?? (this.#current?.requestedBy === requestedBy ? this.#current : null);
+  }
+
+  setVolume(volume) {
+    this.#volume = volume;
+  }
+
   snapshot() {
-    return { current: this.#current, queue: [...this.#items] };
+    return { current: this.#current, queue: [...this.#items], volume: this.#volume };
   }
 }

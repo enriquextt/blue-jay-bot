@@ -26,6 +26,9 @@ export async function createPlayer({ onEnded, onUnavailable }) {
     stop() {
       player.stopVideo();
     },
+    setVolume(volume) {
+      player.setVolume(volume);
+    },
   };
 
   return new Promise((resolve) => {

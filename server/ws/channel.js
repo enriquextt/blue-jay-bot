@@ -3,6 +3,7 @@ import { parseVideoId } from '../youtube/youtube.js';
 
 const MAX_URL_LENGTH = 500;
 const MAX_ID_LENGTH = 64;
+const MAX_VOLUME = 100;
 
 export function createChannel({ wss, queue, fetchTitle }) {
   const clients = new Set();
@@ -60,6 +61,14 @@ export function createChannel({ wss, queue, fetchTitle }) {
         return broadcastState();
       }
 
+      case 'playback.volume': {
+        if (!Number.isInteger(command.volume) || command.volume < 0 || command.volume > MAX_VOLUME) {
+          return sendError(socket, 'errors.invalidMessage');
+        }
+        queue.setVolume(command.volume);
+        return broadcastState();
+      }
+
       case 'playback.ended': {
         if (!isId(command.id)) return sendError(socket, 'errors.invalidMessage');
         if (queue.finish(command.id)) broadcastState();
@@ -98,4 +107,6 @@ export function createChannel({ wss, queue, fetchTitle }) {
 
     socket.on('close', () => clients.delete(socket));
   });
+
+  return { broadcastState };
 }

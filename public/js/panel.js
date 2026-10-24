@@ -3,6 +3,7 @@ import { createPlayer } from './player.js';
 
 const RECONNECT_DELAY_MS = 2000;
 const NOTICE_DURATION_MS = 4000;
+const VOLUME_SEND_INTERVAL_MS = 100;
 
 const elements = {
   connection: document.querySelector('#connection'),
@@ -10,17 +11,21 @@ const elements = {
   addForm: document.querySelector('#add-form'),
   addInput: document.querySelector('#add-input'),
   next: document.querySelector('#next'),
+  volume: document.querySelector('#volume'),
+  volumeValue: document.querySelector('#volume-value'),
   nowTitle: document.querySelector('#now-title'),
   queue: document.querySelector('#queue'),
   queueEmpty: document.querySelector('#queue-empty'),
   notices: document.querySelector('#notices'),
 };
 
-let state = { current: null, queue: [] };
+let state = { current: null, queue: [], volume: 50 };
 let connection = 'connecting';
 let socket = null;
 let player = null;
 let loadedId = null;
+let adjustingVolume = false;
+let lastVolumeSent = 0;
 
 function send(message) {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -49,6 +54,11 @@ function renderNow() {
   elements.next.disabled = !state.current;
 }
 
+function renderVolume() {
+  if (!adjustingVolume) elements.volume.value = state.volume;
+  elements.volumeValue.textContent = `${elements.volume.value}%`;
+}
+
 function renderQueue() {
   elements.queue.replaceChildren(...state.queue.map((track) => {
     const item = document.createElement('li');
@@ -72,6 +82,8 @@ function renderQueue() {
 function syncPlayer() {
   if (!player) return;
 
+  player.setVolume(state.volume);
+
   const wanted = state.current?.id ?? null;
   if (wanted === loadedId) return;
 
@@ -89,6 +101,7 @@ function handleMessage(message) {
       state = message.data;
       renderNow();
       renderQueue();
+      renderVolume();
       syncPlayer();
       break;
     case 'notice':
@@ -137,6 +150,20 @@ function setupEvents() {
   });
 
   elements.next.addEventListener('click', () => send({ type: 'playback.next' }));
+
+  const sendVolume = () => send({ type: 'playback.volume', volume: Number(elements.volume.value) });
+  elements.volume.addEventListener('pointerdown', () => { adjustingVolume = true; });
+  elements.volume.addEventListener('input', () => {
+    elements.volumeValue.textContent = `${elements.volume.value}%`;
+    if (Date.now() - lastVolumeSent < VOLUME_SEND_INTERVAL_MS) return;
+    lastVolumeSent = Date.now();
+    sendVolume();
+  });
+  elements.volume.addEventListener('blur', () => { adjustingVolume = false; });
+  elements.volume.addEventListener('change', () => {
+    adjustingVolume = false;
+    sendVolume();
+  });
 }
 
 function setupSortable() {

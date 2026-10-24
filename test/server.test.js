@@ -44,7 +44,7 @@ test('GET /api/state devuelve la cola vacía al arrancar', async () => {
   const { server, port } = await startServer();
   try {
     const response = await fetch(`http://127.0.0.1:${port}/api/state`);
-    assert.deepEqual(await response.json(), { current: null, queue: [] });
+    assert.deepEqual(await response.json(), { current: null, queue: [], volume: 50 });
   } finally {
     await server.close();
   }
@@ -120,6 +120,35 @@ test('un mensaje mal formado recibe errors.invalidMessage', async () => {
     assert.equal(error.key, 'errors.invalidMessage');
 
     client.socket.close();
+  } finally {
+    await server.close();
+  }
+});
+
+test('playback.volume actualiza el volumen en todos los clientes y rechaza valores no válidos', async () => {
+  const { server, url } = await startServer();
+  try {
+    const client = await connect(url);
+    const other = await connect(url);
+
+    client.socket.send(JSON.stringify({ type: 'playback.volume', volume: 30 }));
+    const state = await other.waitFor((m) => m.type === 'state' && m.data.volume === 30);
+    assert.equal(state.data.volume, 30);
+
+    for (const volume of [101, -1, 2.5, '30']) {
+      client.socket.send(JSON.stringify({ type: 'playback.volume', volume }));
+    }
+    // Los mensajes llegan en orden: cuando se ve el 40 válido, los 4 inválidos ya fueron rechazados.
+    client.socket.send(JSON.stringify({ type: 'playback.volume', volume: 40 }));
+    await client.waitFor((m) => m.type === 'state' && m.data.volume === 40);
+
+    const errors = client.messages.filter((m) => m.type === 'error');
+    assert.equal(errors.length, 4);
+    assert.ok(errors.every((m) => m.key === 'errors.invalidMessage'));
+    assert.ok(!client.messages.some((m) => m.type === 'state' && ![50, 30, 40].includes(m.data.volume)));
+
+    client.socket.close();
+    other.socket.close();
   } finally {
     await server.close();
   }

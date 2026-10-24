@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchVideoTitle, parseVideoId } from '../server/youtube/youtube.js';
+import { fetchVideoTitle, parseVideoId, searchVideoId } from '../server/youtube/youtube.js';
 
 const ID = 'dQw4w9WgXcQ';
 
@@ -49,4 +49,25 @@ test('fetchVideoTitle devuelve null si la red falla', async () => {
     throw new Error('sin red');
   };
   assert.equal(await fetchVideoTitle(ID, fakeFetch), null);
+});
+
+test('searchVideoId devuelve el ID del primer resultado y envía la clave y los filtros', async () => {
+  let requested;
+  const fetchImpl = async (url) => {
+    requested = new URL(url);
+    return { ok: true, json: async () => ({ items: [{ id: { videoId: 'dQw4w9WgXcQ' } }] }) };
+  };
+
+  assert.equal(await searchVideoId('never gonna', 'CLAVE', fetchImpl), 'dQw4w9WgXcQ');
+  assert.equal(requested.searchParams.get('q'), 'never gonna');
+  assert.equal(requested.searchParams.get('key'), 'CLAVE');
+  assert.equal(requested.searchParams.get('videoEmbeddable'), 'true');
+});
+
+test('searchVideoId devuelve null sin resultados y lanza si la API falla', async () => {
+  const empty = async () => ({ ok: true, json: async () => ({ items: [] }) });
+  assert.equal(await searchVideoId('nada', 'CLAVE', empty), null);
+
+  const quota = async () => ({ ok: false, status: 403 });
+  await assert.rejects(searchVideoId('algo', 'CLAVE', quota), /403/);
 });

@@ -43,3 +43,25 @@ export async function fetchVideoTitle(videoId, fetchImpl = fetch) {
     return null;
   }
 }
+
+const SEARCH_ENDPOINT = 'https://www.googleapis.com/youtube/v3/search';
+
+// Devuelve el ID del primer vídeo incrustable, o null si no hay resultados.
+// Lanza un error si la API falla (clave inválida, cuota agotada, red).
+export async function searchVideoId(query, apiKey, fetchImpl = fetch) {
+  const params = new URLSearchParams({
+    part: 'snippet',
+    type: 'video',
+    videoEmbeddable: 'true',
+    maxResults: '1',
+    q: query,
+    key: apiKey,
+  });
+
+  const response = await fetchImpl(`${SEARCH_ENDPOINT}?${params}`, { signal: AbortSignal.timeout(TITLE_TIMEOUT_MS) });
+  if (!response.ok) throw new Error(`youtube.search ${response.status}`);
+
+  const data = await response.json();
+  const videoId = data.items?.[0]?.id?.videoId;
+  return typeof videoId === 'string' && VIDEO_ID_PATTERN.test(videoId) ? videoId : null;
+}
