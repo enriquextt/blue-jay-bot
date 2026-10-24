@@ -31,10 +31,17 @@
     "invalidUrl": "Enlace de YouTube no válido.",
     "trackNotFound": "La canción ya no está en la cola.",
     "serverError": "Error interno del servidor.",
-    "playerUnavailable": "No se pudo cargar el reproductor de YouTube."
+    "playerUnavailable": "No se pudo cargar el reproductor de YouTube.",
+    "apiKeyMissing": "Falta la clave de YouTube Data API para importar playlists.",
+    "playlistFailed": "No se pudo leer la playlist. Revisa que sea pública y la clave de API.",
+    "playlistEmpty": "La playlist no tiene canciones disponibles.",
+    "trackBanned": "Esa canción está en la lista negra.",
+    "baseListFull": "La lista base está llena."
   },
   "notices": {
-    "skippedUnavailable": "Saltada, no disponible: {{title}}"
+    "skippedUnavailable": "Saltada, no disponible: {{title}}",
+    "playlistImported": "Playlist importada: {{added}} nuevas de {{total}} canciones.",
+    "banned": "Vetada: {{title}}"
   },
   "chat": {
     "noPermission": "@{{user}}, solo los moderadores pueden usar ese comando.",
@@ -45,7 +52,8 @@
       "playingNow": "@{{user}}, «{{title}}» suena ahora.",
       "searchDisabled": "@{{user}}, la búsqueda por título no está activada; usa un enlace de YouTube.",
       "notFound": "@{{user}}, no encontré ninguna canción para «{{query}}».",
-      "searchFailed": "@{{user}}, no se pudo buscar la canción ahora mismo. Prueba con un enlace."
+      "searchFailed": "@{{user}}, no se pudo buscar la canción ahora mismo. Prueba con un enlace.",
+      "banned": "@{{user}}, esa canción está vetada."
     },
     "queue": {
       "empty": "No hay nada sonando ni en la cola.",
@@ -77,5 +85,34 @@
       "set": "Volumen ajustado a {{volume}}%.",
       "invalid": "@{{user}}, el volumen debe ser un número entero entre 0 y 100."
     }
+  },
+  "track": {
+    "favorite": "Marcar como favorito",
+    "unfavorite": "Quitar de favoritos",
+    "ban": "Vetar canción",
+    "remove": "Quitar"
+  },
+  "baselist": {
+    "title": "Lista base",
+    "placeholder": "URL de vídeo o playlist de YouTube",
+    "add": "Añadir",
+    "start": "START",
+    "shuffle": "SHUFFLE",
+    "stop": "Parar",
+    "clear": "Vaciar",
+    "empty": "La lista base está vacía.",
+    "count_one": "{{count}} canción",
+    "count_other": "{{count}} canciones",
+    "status": {
+      "inactive": "Parada: no suena nada cuando se acaba la cola.",
+      "sequential": "Activa, en orden: favoritas primero.",
+      "shuffle": "Activa, en aleatorio."
+    },
+    "clearConfirm": "¿Seguro? Pulsa otra vez"
+  },
+  "banned": {
+    "title": "Lista negra",
+    "empty": "No hay canciones vetadas.",
+    "unban": "Quitar veto"
   }
 }

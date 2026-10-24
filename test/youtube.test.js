@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchVideoTitle, parseVideoId, searchVideoId } from '../server/youtube/youtube.js';
+import { fetchPlaylistVideos, fetchVideoTitle, parsePlaylistId, parseVideoId, searchVideoId } from '../server/youtube/youtube.js';
 
 const ID = 'dQw4w9WgXcQ';
 
@@ -70,4 +70,49 @@ test('searchVideoId devuelve null sin resultados y lanza si la API falla', async
 
   const quota = async () => ({ ok: false, status: 403 });
   await assert.rejects(searchVideoId('algo', 'CLAVE', quota), /403/);
+});
+
+const PLAYLIST = 'PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf';
+
+test('parsePlaylistId acepta URL de playlist e ID suelto, y trata como vídeo la URL con v', () => {
+  assert.equal(parsePlaylistId(`https://www.youtube.com/playlist?list=${PLAYLIST}`), PLAYLIST);
+  assert.equal(parsePlaylistId(PLAYLIST), PLAYLIST);
+  assert.equal(parsePlaylistId(`https://www.youtube.com/watch?v=${ID}&list=${PLAYLIST}`), null);
+  assert.equal(parsePlaylistId(`https://example.com/playlist?list=${PLAYLIST}`), null);
+  assert.equal(parsePlaylistId(ID), null);
+  assert.equal(parsePlaylistId('hola'), null);
+});
+
+test('fetchPlaylistVideos recorre las páginas y descarta vídeos privados o eliminados', async () => {
+  const pages = {
+    primera: {
+      nextPageToken: 'SIGUE',
+      items: [
+        { snippet: { title: 'Uno', resourceId: { videoId: 'aqz-KE-bpKQ' } } },
+        { snippet: { title: 'Private video', resourceId: { videoId: 'jNQXAC9IVRw' } } },
+      ],
+    },
+    SIGUE: {
+      items: [
+        { snippet: { title: 'Dos', resourceId: { videoId: ID } } },
+        { snippet: { title: 'Id roto', resourceId: { videoId: 'corto' } } },
+      ],
+    },
+  };
+  const requested = [];
+  const fetchImpl = async (url) => {
+    const params = new URL(url).searchParams;
+    requested.push(params);
+    return { ok: true, json: async () => pages[params.get('pageToken') ?? 'primera'] };
+  };
+
+  const videos = await fetchPlaylistVideos(PLAYLIST, 'CLAVE', fetchImpl);
+  assert.deepEqual(videos, [{ videoId: 'aqz-KE-bpKQ', title: 'Uno' }, { videoId: ID, title: 'Dos' }]);
+  assert.equal(requested.length, 2);
+  assert.equal(requested[0].get('playlistId'), PLAYLIST);
+  assert.equal(requested[0].get('key'), 'CLAVE');
+});
+
+test('fetchPlaylistVideos lanza si la API falla', async () => {
+  await assert.rejects(fetchPlaylistVideos(PLAYLIST, 'CLAVE', async () => ({ ok: false, status: 404 })), /404/);
 });

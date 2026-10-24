@@ -7,4 +7,6 @@ export const config = {
   voteSkipThreshold: Number(process.env.VOTE_SKIP_THRESHOLD ?? 3),
   twitchCredentialsPath: fileURLToPath(new URL('../../data/twitch.json', import.meta.url)),
   youtubeCredentialsPath: fileURLToPath(new URL('../../data/youtube.json', import.meta.url)),
+  baseListPath: fileURLToPath(new URL('../../data/baselist.json', import.meta.url)),
+  blacklistPath: fileURLToPath(new URL('../../data/blacklist.json', import.meta.url)),
 };

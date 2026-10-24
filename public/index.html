@@ -28,6 +28,8 @@
       </div>
       <div class="now-row">
         <p id="now-title" class="now-title"></p>
+        <button id="now-favorite" class="icon" type="button">☆</button>
+        <button id="now-ban" class="icon danger" type="button">⛔</button>
         <button id="next" type="button" data-i18n="now.next">Siguiente</button>
       </div>
       <label class="volume">
@@ -45,10 +47,45 @@
       </form>
     </section>
 
-    <section class="card">
-      <h2 data-i18n="queue.title">Cola</h2>
-      <ol id="queue" class="queue"></ol>
-      <p id="queue-empty" class="empty" data-i18n="queue.empty">La cola está vacía.</p>
+    <section class="card tabs">
+      <div class="tablist" role="tablist">
+        <button id="tab-queue" class="tab" type="button" role="tab" data-tab="queue" aria-selected="true" aria-controls="panel-queue">
+          <span data-i18n="queue.title">Cola</span> <span id="count-queue" class="badge"></span>
+        </button>
+        <button id="tab-baselist" class="tab" type="button" role="tab" data-tab="baselist" aria-selected="false" aria-controls="panel-baselist" tabindex="-1">
+          <span data-i18n="baselist.title">Lista base</span> <span id="count-baselist" class="badge"></span>
+        </button>
+        <button id="tab-banned" class="tab" type="button" role="tab" data-tab="banned" aria-selected="false" aria-controls="panel-banned" tabindex="-1">
+          <span data-i18n="banned.title">Lista negra</span> <span id="count-banned" class="badge"></span>
+        </button>
+      </div>
+
+      <div id="panel-queue" class="tabpanel" role="tabpanel" aria-labelledby="tab-queue">
+        <ol id="queue" class="queue"></ol>
+        <p id="queue-empty" class="empty" data-i18n="queue.empty">La cola está vacía.</p>
+      </div>
+
+      <div id="panel-baselist" class="tabpanel" role="tabpanel" aria-labelledby="tab-baselist" hidden>
+        <form id="baselist-form" class="add-form">
+          <input id="baselist-input" type="text" required autocomplete="off" data-i18n-placeholder="baselist.placeholder">
+          <button type="submit" data-i18n="baselist.add">Añadir</button>
+        </form>
+        <div class="controls">
+          <button id="baselist-start" type="button" data-i18n="baselist.start">START</button>
+          <button id="baselist-shuffle" type="button" data-i18n="baselist.shuffle">SHUFFLE</button>
+          <button id="baselist-stop" class="secondary" type="button" data-i18n="baselist.stop">Parar</button>
+          <button id="baselist-clear" class="secondary" type="button" data-i18n="baselist.clear">Vaciar</button>
+        </div>
+        <p id="baselist-status" class="empty"></p>
+        <p id="baselist-count" class="empty"></p>
+        <ul id="baselist" class="track-list"></ul>
+        <p id="baselist-empty" class="empty" data-i18n="baselist.empty">La lista base está vacía.</p>
+      </div>
+
+      <div id="panel-banned" class="tabpanel" role="tabpanel" aria-labelledby="tab-banned" hidden>
+        <ul id="banned" class="track-list"></ul>
+        <p id="banned-empty" class="empty" data-i18n="banned.empty">No hay canciones vetadas.</p>
+      </div>
     </section>
   </main>
 

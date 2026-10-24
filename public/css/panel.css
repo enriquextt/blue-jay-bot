@@ -161,7 +161,8 @@ select {
   padding: 4px 8px;
 }
 
-.queue {
+.queue,
+.track-list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -169,13 +170,17 @@ select {
   gap: 8px;
 }
 
-.queue li {
+.queue li,
+.track-list li {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 10px 12px;
   background: var(--bg);
   border-radius: 8px;
+}
+
+.queue li {
   cursor: grab;
 }
 
@@ -191,9 +196,95 @@ select {
   white-space: nowrap;
 }
 
-.queue li button {
+.queue li button,
+.track-list li button {
   padding: 6px 10px;
+  background: #2c3442;
+}
+
+button.danger,
+.queue li button.danger,
+.track-list li button.danger {
   background: var(--danger);
+}
+
+button.icon {
+  padding: 6px 10px;
+  background: #2c3442;
+  line-height: 1;
+}
+
+button.icon.active {
+  color: #ffc53d;
+}
+
+button[aria-pressed="true"] {
+  outline: 2px solid #fff;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.track-list {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.track-list:empty {
+  display: none;
+}
+
+.tablist {
+  display: flex;
+  gap: 4px;
+  margin: -4px 0 16px;
+  border-bottom: 1px solid #2c3442;
+  overflow-x: auto;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.badge {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #2c3442;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.tab[aria-selected="true"] .badge {
+  background: var(--accent);
+  color: #fff;
 }
 
 .empty {

@@ -158,3 +158,14 @@ test('las respuestas salen en inglés si se configura ese idioma', async () => {
   const { say } = await setup({ t: await createTranslator('en') });
   assert.match(await say('ana', '!queue'), /Nothing is playing/);
 });
+
+test('!sr rechaza las canciones de la lista negra', async () => {
+  const blacklist = { has: (videoId) => videoId === ID_A };
+  const { queue, changes, say } = await setup({ blacklist });
+
+  assert.match(await say('ana', `!sr ${ID_A}`), /vetada/);
+  assert.equal(queue.snapshot().current, null);
+  assert.equal(changes.count, 0);
+
+  assert.match(await say('ana', `!sr ${ID_B}`), /suena ahora/);
+});

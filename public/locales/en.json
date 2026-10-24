@@ -31,10 +31,17 @@
     "invalidUrl": "Invalid YouTube link.",
     "trackNotFound": "The song is no longer in the queue.",
     "serverError": "Internal server error.",
-    "playerUnavailable": "The YouTube player could not be loaded."
+    "playerUnavailable": "The YouTube player could not be loaded.",
+    "apiKeyMissing": "The YouTube Data API key is missing, so playlists cannot be imported.",
+    "playlistFailed": "The playlist could not be read. Check that it is public and the API key.",
+    "playlistEmpty": "The playlist has no available songs.",
+    "trackBanned": "That song is blacklisted.",
+    "baseListFull": "The base list is full."
   },
   "notices": {
-    "skippedUnavailable": "Skipped, unavailable: {{title}}"
+    "skippedUnavailable": "Skipped, unavailable: {{title}}",
+    "playlistImported": "Playlist imported: {{added}} new out of {{total}} songs.",
+    "banned": "Banned: {{title}}"
   },
   "chat": {
     "noPermission": "@{{user}}, only moderators can use that command.",
@@ -45,7 +52,8 @@
       "playingNow": "@{{user}}, \"{{title}}\" is playing now.",
       "searchDisabled": "@{{user}}, search by title is not enabled; use a YouTube link.",
       "notFound": "@{{user}}, I found no song for \"{{query}}\".",
-      "searchFailed": "@{{user}}, the song could not be searched right now. Try a link."
+      "searchFailed": "@{{user}}, the song could not be searched right now. Try a link.",
+      "banned": "@{{user}}, that song is banned."
     },
     "queue": {
       "empty": "Nothing is playing and the queue is empty.",
@@ -77,5 +85,34 @@
       "set": "Volume set to {{volume}}%.",
       "invalid": "@{{user}}, the volume must be a whole number from 0 to 100."
     }
+  },
+  "track": {
+    "favorite": "Mark as favorite",
+    "unfavorite": "Remove from favorites",
+    "ban": "Ban song",
+    "remove": "Remove"
+  },
+  "baselist": {
+    "title": "Base list",
+    "placeholder": "YouTube video or playlist URL",
+    "add": "Add",
+    "start": "START",
+    "shuffle": "SHUFFLE",
+    "stop": "Stop",
+    "clear": "Clear",
+    "empty": "The base list is empty.",
+    "count_one": "{{count}} song",
+    "count_other": "{{count}} songs",
+    "status": {
+      "inactive": "Stopped: nothing plays when the queue ends.",
+      "sequential": "Active, in order: favorites first.",
+      "shuffle": "Active, shuffled."
+    },
+    "clearConfirm": "Sure? Click again"
+  },
+  "banned": {
+    "title": "Blacklist",
+    "empty": "No banned songs.",
+    "unban": "Unban"
   }
 }

@@ -11,7 +11,7 @@ function preview(title) {
   return title.length > TITLE_PREVIEW_LENGTH ? `${title.slice(0, TITLE_PREVIEW_LENGTH - 1)}…` : title;
 }
 
-export function createCommands({ queue, fetchTitle, searchVideo = null, t, onChange, voteSkipThreshold = 3 }) {
+export function createCommands({ queue, blacklist = null, fetchTitle, searchVideo = null, t, onChange, voteSkipThreshold = 3 }) {
   let votes = { trackId: null, voters: new Set() };
 
   function requesterKey({ platform, user }) {
@@ -35,6 +35,8 @@ export function createCommands({ queue, fetchTitle, searchVideo = null, t, onCha
       }
       if (!videoId) return t('chat.sr.notFound', { user, query });
     }
+
+    if (blacklist?.has(videoId)) return t('chat.sr.banned', { user });
 
     const title = (await fetchTitle(videoId)) ?? videoId;
     const track = queue.add({ videoId, title, requestedBy: requesterKey(message) });

@@ -13,14 +13,14 @@ Leyenda de la columna de decisión:
 
 - [x] Cola de peticiones de viewers — **Mantener**
 - [x] Reordenar la cola con arrastrar y soltar en tiempo real — **Mantener**
-- [ ] Lista base (fallback) que se reproduce en modo aleatorio cuando la cola está vacía — **Mantener**
-- [ ] Botones START / SHUFFLE para la lista base — **Mantener**
-- [ ] Añadir playlists de YouTube como lista base — **Mantener**
+- [x] Lista base (fallback) que se reproduce en modo aleatorio cuando la cola está vacía — **Mantener** (guardada en `data/baselist.json`; START en orden o SHUFFLE en aleatorio)
+- [x] Botones START / SHUFFLE para la lista base — **Mantener** (más un botón para parar)
+- [x] Añadir playlists de YouTube como lista base — **Mantener** (requiere la clave de YouTube Data API; hasta 1.000 vídeos por importación)
 - [x] Auto-skip de vídeos no disponibles, bloqueados o eliminados — **Mantener**
-- [ ] Persistencia de la cola entre recargas — **Mantener** (changelog v1.2.3)
+- [ ] Persistencia de la cola entre recargas — **Mantener** (changelog v1.2.3). Planificada en la fase 5, junto con el volumen y el modo START/SHUFFLE; hoy solo se guardan la lista base y la lista negra
 - [ ] Limpiar cola y guardar cola — **Mantener**
 - [x] Control de volumen del reproductor — **Mantener** (slider en el panel y `!volume` en el chat)
-- [ ] Favoritos (estrella) en la lista base, la cola y la canción actual; aparecen arriba y entran en START/SHUFFLE — **Mantener** (changelog v1.2.3)
+- [x] Favoritos (estrella) en la lista base, la cola y la canción actual; aparecen arriba y entran en START/SHUFFLE — **Mantener** (changelog v1.2.3). Marcar una canción de la cola o la actual la añade a la lista base
 
 ## 2. Spotify
 
@@ -50,7 +50,7 @@ Leyenda de la columna de decisión:
 - [ ] Límite global de peticiones activas (por defecto 100) — **Mantener**
 - [ ] Interruptores para activar o desactivar cada límite, con estado guardado — **Mantener**
 - [ ] Avisos en el chat cuando se alcanza un límite — **Mantener**
-- [ ] Lista negra / ban de canciones con un clic: se saltan y se eliminan de la cola — **Mantener**
+- [x] Lista negra / ban de canciones con un clic: se saltan y se eliminan de la cola — **Mantener** (guardada en `data/blacklist.json`; también se retiran de la lista base y se rechazan en `!sr`)
 - [ ] Mensajes del bot editables por idioma — **Mantener**
 - [ ] Activar o desactivar cada mensaje del bot sin borrar su texto — **Mantener**
 
@@ -73,7 +73,7 @@ Leyenda de la columna de decisión:
 
 - [ ] Ver cola, lista base e historial en un único panel — **Mantener** (requerimiento nuevo)
 - [ ] Reordenar, eliminar y saltar pistas desde el panel — **Mantener** (requerimiento nuevo)
-- [ ] Gestionar listas base (añadir, quitar, activar) — **Mantener** (requerimiento nuevo)
+- [x] Gestionar listas base (añadir, quitar, activar) — **Mantener** (requerimiento nuevo). La lista base es única (ver `docs/propuesta.md`, 3.5)
 - [ ] Controles de reproducción: play, pausa, siguiente, aleatorio — **Mantener** (requerimiento nuevo)
 - [x] Ver el estado en vivo de la cola y de la canción actual — **Mantener** (requerimiento nuevo)
 

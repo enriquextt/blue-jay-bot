@@ -65,3 +65,63 @@ export async function searchVideoId(query, apiKey, fetchImpl = fetch) {
   const videoId = data.items?.[0]?.id?.videoId;
   return typeof videoId === 'string' && VIDEO_ID_PATTERN.test(videoId) ? videoId : null;
 }
+
+const PLAYLIST_ID_PATTERN = /^[\w-]{10,64}$/;
+const BARE_PLAYLIST_PATTERN = /^(?:PL|UU|FL|OL)[\w-]{10,62}$/;
+const PLAYLIST_ENDPOINT = 'https://www.googleapis.com/youtube/v3/playlistItems';
+const PLAYLIST_PAGE_SIZE = 50;
+const PLAYLIST_MAX_PAGES = 20;
+const UNAVAILABLE_TITLES = new Set(['Private video', 'Deleted video']);
+
+// Devuelve el ID de la playlist si la entrada es una lista (URL con `list` sin vídeo concreto, o ID suelto).
+// Una URL de vídeo que además lleva `list` se trata como vídeo.
+export function parsePlaylistId(input) {
+  const text = String(input ?? '').trim();
+  if (BARE_PLAYLIST_PATTERN.test(text)) return text;
+
+  let url;
+  try {
+    url = new URL(text);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+  if (!WATCH_HOSTS.has(url.hostname)) return null;
+  if (url.pathname === '/watch' && url.searchParams.has('v')) return null;
+
+  const id = url.searchParams.get('list');
+  return id && PLAYLIST_ID_PATTERN.test(id) ? id : null;
+}
+
+// Lee los vídeos de una playlist con playlistItems.list (1 unidad de cuota por página de 50).
+// Descarta vídeos privados o eliminados. Lanza un error si la API falla.
+export async function fetchPlaylistVideos(playlistId, apiKey, fetchImpl = fetch) {
+  const videos = [];
+  let pageToken = null;
+
+  for (let page = 0; page < PLAYLIST_MAX_PAGES; page += 1) {
+    const params = new URLSearchParams({
+      part: 'snippet',
+      maxResults: String(PLAYLIST_PAGE_SIZE),
+      playlistId,
+      key: apiKey,
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const response = await fetchImpl(`${PLAYLIST_ENDPOINT}?${params}`, { signal: AbortSignal.timeout(TITLE_TIMEOUT_MS) });
+    if (!response.ok) throw new Error(`youtube.playlist ${response.status}`);
+
+    const data = await response.json();
+    for (const item of data.items ?? []) {
+      const videoId = item.snippet?.resourceId?.videoId;
+      const title = item.snippet?.title;
+      if (typeof videoId !== 'string' || !VIDEO_ID_PATTERN.test(videoId)) continue;
+      if (typeof title !== 'string' || UNAVAILABLE_TITLES.has(title)) continue;
+      videos.push({ videoId, title: title.slice(0, TITLE_MAX_LENGTH) });
+    }
+
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+  }
+  return videos;
+}

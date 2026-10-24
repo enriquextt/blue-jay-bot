@@ -3,12 +3,14 @@ import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { WebSocketServer } from 'ws';
+import { BaseList } from './baselist/base-list.js';
+import { Blacklist } from './baselist/blacklist.js';
 import { createTwitchAdapter, loadCredentials } from './chat/twitch.js';
 import { createCommands } from './commands/index.js';
 import { createTranslator } from './i18n/index.js';
 import { PlaybackQueue } from './queue/playback-queue.js';
 import { createChannel } from './ws/channel.js';
-import { fetchVideoTitle, searchVideoId } from './youtube/youtube.js';
+import { fetchPlaylistVideos, fetchVideoTitle, searchVideoId } from './youtube/youtube.js';
 
 const ROOT_DIR = fileURLToPath(new URL('..', import.meta.url));
 const PUBLIC_DIR = join(ROOT_DIR, 'public');
@@ -21,11 +23,22 @@ export async function createServer({
   voteSkipThreshold,
   twitchCredentialsPath = null,
   youtubeCredentialsPath = null,
+  baseListPath = null,
+  blacklistPath = null,
   log = () => {},
   fetchTitle = (videoId) => fetchVideoTitle(videoId),
 }) {
   const app = Fastify({ logger: false });
-  const queue = new PlaybackQueue();
+  const baseList = new BaseList({ path: baseListPath, log });
+  const blacklist = new Blacklist({ path: blacklistPath, log });
+  await Promise.all([baseList.load(), blacklist.load()]);
+  const queue = new PlaybackQueue({ fallback: () => baseList.next() });
+
+  const withFavorite = (track) => track && { ...track, favorite: baseList.isFavorite(track.videoId) };
+  const getState = () => {
+    const { current, queue: pending, volume } = queue.snapshot();
+    return { current: withFavorite(current), queue: pending.map(withFavorite), volume, fallback: baseList.status() };
+  };
 
   await app.register(fastifyStatic, { root: PUBLIC_DIR });
   await app.register(fastifyStatic, {
@@ -39,18 +52,28 @@ export async function createServer({
     decorateReply: false,
   });
 
-  app.get('/api/state', async () => queue.snapshot());
+  app.get('/api/state', async () => getState());
+  app.get('/api/baselist', async () => ({ items: baseList.list(), banned: blacklist.list() }));
 
   await app.listen({ host, port });
-
-  const wss = new WebSocketServer({ server: app.server, path: '/ws' });
-  const channel = createChannel({ wss, queue, fetchTitle });
 
   const youtube = youtubeCredentialsPath ? await loadCredentials(youtubeCredentialsPath) : null;
   if (youtubeCredentialsPath && !youtube?.apiKey) log('youtube.searchDisabled');
 
+  const wss = new WebSocketServer({ server: app.server, path: '/ws' });
+  const channel = createChannel({
+    wss,
+    queue,
+    baseList,
+    blacklist,
+    getState,
+    fetchTitle,
+    listPlaylist: youtube?.apiKey ? (playlistId) => fetchPlaylistVideos(playlistId, youtube.apiKey) : null,
+  });
+
   const commands = createCommands({
     queue,
+    blacklist,
     fetchTitle,
     searchVideo: youtube?.apiKey ? (query) => searchVideoId(query, youtube.apiKey) : null,
     t: await createTranslator(language),
@@ -65,6 +88,7 @@ export async function createServer({
       twitch?.stop();
       wss.close();
       await app.close();
+      await Promise.all([baseList.flush(), blacklist.flush()]);
     },
   };
 }

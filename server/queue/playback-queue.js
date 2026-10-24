@@ -6,9 +6,15 @@ export class PlaybackQueue {
   #items = [];
   #current = null;
   #volume = DEFAULT_VOLUME;
+  #fallback;
+
+  // `fallback` devuelve { videoId, title } cuando la cola se vacía, o null si no hay nada que poner.
+  constructor({ fallback = () => null } = {}) {
+    this.#fallback = fallback;
+  }
 
   add({ videoId, title, requestedBy = null }) {
-    const track = { id: randomUUID(), source: 'youtube', videoId, title, requestedBy };
+    const track = { id: randomUUID(), source: 'youtube', origin: 'request', videoId, title, requestedBy };
     this.#items.push(track);
     if (!this.#current) this.advance();
     return track;
@@ -27,6 +33,27 @@ export class PlaybackQueue {
     return true;
   }
 
+  // Quita de la cola todas las apariciones del vídeo; si suena ahora, pasa a la siguiente.
+  removeByVideoId(videoId) {
+    let removed = 0;
+    this.#items = this.#items.filter((track) => {
+      if (track.videoId !== videoId) return true;
+      removed += 1;
+      return false;
+    });
+
+    if (this.#current?.videoId === videoId) {
+      this.advance();
+      removed += 1;
+    }
+    return removed;
+  }
+
+  find(id) {
+    if (this.#current?.id === id) return this.#current;
+    return this.#items.find((track) => track.id === id) ?? null;
+  }
+
   move(id, toIndex) {
     const index = this.#items.findIndex((track) => track.id === id);
     if (index === -1) return false;
@@ -38,7 +65,7 @@ export class PlaybackQueue {
   }
 
   advance() {
-    this.#current = this.#items.shift() ?? null;
+    this.#current = this.#items.shift() ?? this.#nextFromFallback();
     return this.#current;
   }
 
@@ -56,6 +83,13 @@ export class PlaybackQueue {
 
   setVolume(volume) {
     this.#volume = volume;
+  }
+
+  #nextFromFallback() {
+    const entry = this.#fallback();
+    if (!entry) return null;
+
+    return { id: randomUUID(), source: 'youtube', origin: 'base', videoId: entry.videoId, title: entry.title, requestedBy: null };
   }
 
   snapshot() {
