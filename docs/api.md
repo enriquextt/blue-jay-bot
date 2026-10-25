@@ -2,7 +2,7 @@
 
 Contrato entre el servidor, el panel de control, el widget de OBS y los adaptadores de chat. Es el mismo para el backend en Node.js y en Python (ver `docs/propuesta.md`, sección 3.1).
 
-Estado: **versión 0.3** (fases 0, 1, 2 y 3).
+Estado: **versión 0.5** (fases 0 a 4.5).
 
 ## 1. Convenciones
 
@@ -24,15 +24,16 @@ Devuelve la foto actual de la reproducción.
     { "id": "9b1c…", "source": "youtube", "origin": "request", "videoId": "aqz-KE-bpKQ", "title": "Otro título", "requestedBy": "twitch:ana", "favorite": false }
   ],
   "volume": 50,
-  "fallback": { "active": true, "mode": "shuffle" }
+  "fallback": { "active": true, "mode": "shuffle", "includeLibrary": false }
 }
 ```
 
 - `current` es `null` si no hay ninguna canción sonando.
 - `queue` son las canciones pendientes, en orden de reproducción.
 - `volume` es el volumen del reproductor, entero de 0 a 100. El panel lo aplica al reproductor de YouTube.
-- `fallback` indica si la lista base está activa (`active`) y en qué `mode` (`sequential` o `shuffle`). No se guarda entre reinicios.
-- `favorite` es `true` si el vídeo es un favorito de la lista base.
+- `fallback` indica si la lista base está activa (`active`), en qué `mode` (`sequential` o `shuffle`) y si incluye toda la biblioteca local (`includeLibrary`). No se guarda entre reinicios.
+- `favorite` es `true` si la pista es un favorito de la lista base.
+- Una pista local lleva `source: "local"`, `localId` y `artist` en lugar de `videoId` (ver sección 4).
 
 ### `GET /api/baselist`
 
@@ -41,9 +42,16 @@ Devuelve la lista base (favoritos primero) y la lista negra. Es el mismo conteni
 ```json
 {
   "items": [{ "id": "c0de…", "source": "youtube", "videoId": "dQw4w9WgXcQ", "title": "Título", "favorite": true }],
-  "banned": [{ "videoId": "aqz-KE-bpKQ", "title": "Otro título" }]
+  "banned": [{ "key": "youtube:aqz-KE-bpKQ", "source": "youtube", "videoId": "aqz-KE-bpKQ", "title": "Otro título" }]
 }
 ```
+
+### `GET /media/:id`
+
+Entrega el archivo de una pista de la biblioteca local. `:id` es el `localId` de la pista; el servidor busca la ruta en su índice, así que nunca interpreta una ruta del cliente.
+
+- Responde `200` con el tipo de audio del archivo, o `206` si la petición lleva `Range` (el navegador lo usa para saltar a un punto de la pista).
+- Responde `404` si el id no existe, si no hay carpeta configurada o si el archivo ya no está dentro de la carpeta.
 
 ## 3. WebSocket
 
@@ -55,6 +63,8 @@ Ruta: `ws://<host>/ws`. Todos los cambios de estado se difunden a todos los clie
 |---|---|---|
 | `state` | `data`: `{ current, queue, volume, fallback }` | Al conectar y después de cada cambio de reproducción |
 | `baselist` | `data`: `{ items, banned }` | Al conectar y después de cada cambio en la lista base o en la lista negra |
+| `library` | `data`: `{ configured, folderName, status, count }` | Al conectar y cuando cambia la carpeta o el escaneo. `status` es `none`, `scanning`, `ready` o `error`. `folderName` es solo el nombre de la carpeta, nunca la ruta |
+| `library.results` | `query`, `items`, `total` | Respuesta a `library.search`. Solo llega al cliente que preguntó. Cada ítem es `{ id, source, localId, title, artist, duration, favorite }` con `id` igual a `localId` y `duration` en segundos (`null` si se desconoce) |
 | `notice` | `key`, `params?` | Aviso informativo (por ejemplo, saltada una canción no disponible) |
 | `error` | `key`, `params?` | El comando recibido no se pudo aplicar. Solo llega al cliente que lo envió |
 
@@ -82,7 +92,13 @@ Ejemplo de aviso:
 | `baselist.stop` | — | Desactiva la lista base. La canción que suena no se interrumpe |
 | `favorite.set` | `id`, `favorite` (booleano) | Marca o desmarca un favorito. `id` puede ser la canción actual, una de la cola o una de la lista base. Si se marca una canción que no está en la lista base, entra en ella |
 | `ban.add` | `id` | Veta el vídeo de una canción actual, de la cola o de la lista base: lo quita de la cola (si suena, pasa a la siguiente) y de la lista base, y lanza `notices.banned` |
-| `ban.remove` | `videoId` | Quita un vídeo de la lista negra |
+| `ban.remove` | `key` | Quita una pista de la lista negra. `key` es la que lleva cada entrada de `banned` (`youtube:<videoId>` o `local:<localId>`) |
+| `baselist.includeLibrary` | `enabled` (booleano) | Incluye o no toda la biblioteca local en la lista base, sin copiarla a ella. Las pistas vetadas quedan fuera |
+| `library.setFolder` | `path` (string, ruta absoluta, máximo 1.024 caracteres) | Cambia la carpeta de música, la guarda y la escanea. Solo la acepta un cliente conectado desde el propio equipo (loopback); si no, `errors.localOnly`. Si no existe, no es absoluta o no es una carpeta: `errors.folderInvalid` |
+| `library.rescan` | — | Vuelve a escanear la carpeta |
+| `library.search` | `query` (string, máximo 100 caracteres) | Busca por título, artista, álbum, comentario, descripción, subtítulo y nombre de archivo, sin distinguir mayúsculas ni acentos. Todos los términos deben aparecer, cada uno en cualquier campo. Ordena por relevancia (título, luego artista, luego el resto) y devuelve `library.results` con hasta 50 pistas (las vetadas no salen). Una consulta vacía lista las primeras por orden alfabético. Esta búsqueda del panel no es estricta: un título corto basta (ver `!sr` en la sección 6.2) |
+| `library.queue` | `id` (`localId`) | Añade la pista local al final de la cola. Si está vetada, `errors.trackBanned` |
+| `library.addToBaseList` | `id` (`localId`) | Añade la pista local a la lista base sin marcarla como favorita (si ya está, no hace nada). Si está vetada, `errors.trackBanned`; si la lista está llena, `errors.baseListFull` |
 
 Los comandos `playback.ended` y `playback.unavailable` son idempotentes: enviar dos veces el mismo `id` no salta dos canciones.
 
@@ -104,6 +120,8 @@ Reglas de la lista base:
 | `errors.apiKeyMissing` | Se pidió importar una playlist y no hay clave de YouTube Data API |
 | `errors.playlistFailed` | La API de YouTube falló al leer la playlist (privada, inexistente, cuota o red) |
 | `errors.playlistEmpty` | La playlist no tiene vídeos disponibles |
+| `errors.localOnly` | Se intentó cambiar la carpeta de música desde otro equipo |
+| `errors.folderInvalid` | La carpeta no existe, no es una ruta absoluta o no se puede leer |
 | `errors.serverError` | Error interno inesperado |
 
 ## 4. Modelo de datos de una canción
@@ -111,28 +129,43 @@ Reglas de la lista base:
 ```
 Track {
   id:       string   UUID generado por el servidor
-  source:   "youtube" (fase 1). "local" llegará en la fase 4
+  source:   "youtube" | "local"
   origin:   "request" (cola de peticiones) | "base" (la eligió la lista base)
-  videoId:  string   11 caracteres [A-Za-z0-9_-]
-  title:    string   máximo 200 caracteres. Si no se puede obtener, es el videoId
+  videoId:  string   solo YouTube: 11 caracteres [A-Za-z0-9_-]
+  localId:  string   solo local: 24 caracteres hexadecimales (SHA-256 de la ruta relativa, recortado)
+  artist:   string | null   solo local: de las etiquetas del archivo o, si faltan, del nombre del archivo o de la carpeta
+  duration: number | null   solo en los resultados de `library.search`: segundos, null si se desconoce
+  title:    string   máximo 200 caracteres. En YouTube, si no se puede obtener, es el videoId
   requestedBy: string | null   "<plataforma>:<usuario en minúsculas>", por ejemplo "twitch:ana". null si la añadió el panel o la lista base
-  favorite: boolean  true si el vídeo es favorito en la lista base (solo en `state`)
+  favorite: boolean  true si la pista es favorita en la lista base (solo en `state`)
 }
 
 BaseItem {
   id:       string   UUID generado al cargar o añadir; no se conserva entre reinicios
-  source, videoId, title, favorite   como en Track
+  source, videoId | localId, artist, title, favorite   como en Track
 }
+
+Clave de pista (`key`)  identifica una pista aunque cambie su `id`: `youtube:<videoId>` o `local:<localId>`.
+                        La usan la lista base, la cola y la lista negra.
 ```
 
-La lista base y la lista negra se guardan en `data/baselist.json` y `data/blacklist.json` (ignorados por git). Son listas de `{ videoId, title, favorite }` y `{ videoId, title }`. Las entradas con un `videoId` no válido se ignoran al cargar.
+La lista base y la lista negra se guardan en `data/baselist.json` y `data/blacklist.json` (ignorados por git). Son listas de `{ source?, videoId | localId, artist?, title, favorite }` y `{ source?, videoId | localId, artist?, title }`. Sin `source` se asume YouTube, así que los archivos guardados en la fase 3 siguen siendo válidos. Las entradas con un `videoId` o `localId` no válido se ignoran al cargar.
+
+La carpeta de música se guarda en `data/library.json` (`{ "folder": "…" }`, ignorado por git). El índice de pistas vive en memoria y se reconstruye al arrancar.
 
 ## 5. Validación y seguridad
 
 - Los enlaces solo se aceptan de `youtube.com`, `m.youtube.com`, `music.youtube.com` y `youtu.be`. Se extrae el ID; nunca se usa la URL tal cual.
 - El título se obtiene del endpoint público oEmbed de YouTube, sin clave de API. Si falla, se usa el ID.
 - Los textos del panel se insertan siempre con `textContent`, nunca con `innerHTML`.
-- El servidor solo sirve `public/` y los módulos de `node_modules` indicados. No hay listado de directorios.
+- El servidor solo sirve `public/`, los módulos de `node_modules` indicados y los archivos de la biblioteca por su `localId`. No hay listado de directorios.
+- Biblioteca local (entrada no confiable):
+  - Ninguna ruta del sistema sale del servidor: `library` solo envía el nombre de la carpeta y las pistas solo llevan su id.
+  - La carpeta solo se puede cambiar desde el propio equipo (loopback), aunque el servidor escuche en otra dirección.
+  - El escaneo ignora enlaces simbólicos y archivos o carpetas ocultos (los que empiezan por `.`), y se limita a 12 niveles y 50.000 pistas.
+  - Antes de servir un archivo se comprueba con `realpath` que sigue dentro de la carpeta, por si lo sustituyeron por un enlace.
+  - Formatos aceptados: `.mp3`, `.flac`, `.ogg`, `.m4a` y `.wav`.
+  - Las etiquetas son entrada no confiable: se recortan (título y artista a 200 caracteres, cada nota a 500, hasta 10 notas) y el panel las muestra siempre con `textContent`. Un archivo ilegible o sin etiquetas se indexa con los datos de su nombre.
 
 ## 6. Chat
 
@@ -152,13 +185,16 @@ Cada adaptador (`server/chat/`) entrega al núcleo:
 
 | Comando | Quién | Efecto |
 |---|---|---|
-| `!sr <enlace, ID o título>` | Todos | Añade la canción y responde con su posición. Si no es un enlace ni un ID, busca el título en YouTube (primer resultado incrustable). Rechaza las canciones de la lista negra |
+| `!sr <enlace, ID o texto>` | Todos | Añade la canción y responde con su posición. Si no es un enlace ni un ID, **busca primero en la biblioteca local** (mejor coincidencia) y, solo si no hay ninguna, busca el texto en YouTube (primer resultado incrustable). Los enlaces y los ID van siempre a YouTube. Rechaza las canciones de la lista negra. La búsqueda local es estricta (ver debajo) |
+| `!local <texto>` | Todos | Añade la mejor coincidencia de la biblioteca local, buscando por título, artista, álbum, comentario o descripción. Nunca consulta YouTube. Si no hay biblioteca o está vacía, avisa de que no está disponible. La búsqueda local es estricta (ver debajo) |
 | `!queue` | Todos | Canción actual y las 10 siguientes |
 | `!when` | Todos | Cuántas canciones suenan antes de la última petición del usuario |
 | `!voteskip` | Todos | Un voto por usuario y canción. Salta al llegar a `VOTE_SKIP_THRESHOLD` (por defecto 3) |
 | `!wrongsong` | Todos | Retira la última petición del propio usuario |
 | `!skip` | Moderadores | Salta la canción actual |
 | `!volume [0-100]` | Todos para consultar, moderadores para cambiar | Consulta o ajusta el volumen |
+
+**Búsqueda estricta (`!sr` y `!local`).** Para que un texto corto del chat no acabe en la pista equivocada, una palabra que solo aparece en textos de **menos de 10 caracteres** (un título corto, una nota —comentario, descripción o subtítulo— corta o el nombre del archivo) no vale por sí sola: hace falta que otra palabra de la búsqueda coincida con el **artista o el álbum**. Las coincidencias en el artista o el álbum no tienen restricción, y un título o una nota de 10 o más caracteres valen solos. El nombre del archivo nunca cuenta como largo. Por ejemplo, con dos pistas llamadas «Love», `!sr love` no encuentra ninguna, y `!sr love beatles` encuentra la de Beatles. Si no hay coincidencia, `!sr` pregunta a YouTube y `!local` sugiere añadir el artista o el álbum.
 
 ### 6.3 Twitch
 
@@ -174,6 +210,5 @@ Cada adaptador (`server/chat/`) entrega al núcleo:
 
 ## 7. Pendiente
 
-- *(fase 4)* Pistas de la carpeta local: `source: "local"`, con `id` generado en el escaneo. La ruta nunca sale del servidor. Se mezclan con las pistas de YouTube en la misma lista base.
 - *(fase 5)* Persistencia entre reinicios de la cola, la canción actual, el volumen y `fallback` (hoy solo se guardan la lista base y la lista negra).
 - Adaptadores de Kick y YouTube con el mismo contrato.

@@ -26,6 +26,7 @@
       <div class="player-frame">
         <div id="player"></div>
       </div>
+      <audio id="local-audio" class="local-audio" controls hidden></audio>
       <div class="now-row">
         <p id="now-title" class="now-title"></p>
         <button id="now-favorite" class="icon" type="button">☆</button>
@@ -55,6 +56,9 @@
         <button id="tab-baselist" class="tab" type="button" role="tab" data-tab="baselist" aria-selected="false" aria-controls="panel-baselist" tabindex="-1">
           <span data-i18n="baselist.title">Lista base</span> <span id="count-baselist" class="badge"></span>
         </button>
+        <button id="tab-library" class="tab" type="button" role="tab" data-tab="library" aria-selected="false" aria-controls="panel-library" tabindex="-1">
+          <span data-i18n="library.title">Biblioteca local</span> <span id="count-library" class="badge"></span>
+        </button>
         <button id="tab-banned" class="tab" type="button" role="tab" data-tab="banned" aria-selected="false" aria-controls="panel-banned" tabindex="-1">
           <span data-i18n="banned.title">Lista negra</span> <span id="count-banned" class="badge"></span>
         </button>
@@ -80,6 +84,25 @@
         <p id="baselist-count" class="empty"></p>
         <ul id="baselist" class="track-list"></ul>
         <p id="baselist-empty" class="empty" data-i18n="baselist.empty">La lista base está vacía.</p>
+      </div>
+
+      <div id="panel-library" class="tabpanel" role="tabpanel" aria-labelledby="tab-library" hidden>
+        <form id="library-form" class="add-form">
+          <input id="library-folder" type="text" required autocomplete="off" data-i18n-placeholder="library.folderPlaceholder">
+          <button type="submit" data-i18n="library.folderSave">Guardar carpeta</button>
+        </form>
+        <div class="controls">
+          <button id="library-rescan" class="secondary" type="button" data-i18n="library.rescan">Reescanear</button>
+          <label class="check">
+            <input id="library-include" type="checkbox">
+            <span data-i18n="library.include">Incluir la biblioteca en la lista base</span>
+          </label>
+        </div>
+        <p id="library-status" class="empty"></p>
+        <input id="library-search" type="search" autocomplete="off" data-i18n-placeholder="library.searchPlaceholder">
+        <ul id="library-results" class="track-list"></ul>
+        <p id="library-empty" class="empty" data-i18n="library.empty">No hay pistas que mostrar.</p>
+        <p id="library-showing" class="empty"></p>
       </div>
 
       <div id="panel-banned" class="tabpanel" role="tabpanel" aria-labelledby="tab-banned" hidden>

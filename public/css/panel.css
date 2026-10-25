@@ -323,3 +323,37 @@ button[aria-pressed="true"] {
     align-items: stretch;
   }
 }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.check input {
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.local-audio {
+  width: 100%;
+  margin-top: 12px;
+}
+
+#library-search {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+#library-search:disabled {
+  opacity: 0.5;
+}
+
+.duration {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}

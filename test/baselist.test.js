@@ -58,10 +58,10 @@ test('marcar favorita una canción que no está en la lista base la añade', () 
   assert.equal(baseList.list().length, 0);
 
   baseList.setFavorite(entry(0), true);
-  assert.equal(baseList.isFavorite(IDS[0]), true);
+  assert.equal(baseList.isFavorite(`youtube:${IDS[0]}`), true);
 
   baseList.setFavorite(entry(0), false);
-  assert.equal(baseList.isFavorite(IDS[0]), false);
+  assert.equal(baseList.isFavorite(`youtube:${IDS[0]}`), false);
   assert.equal(baseList.list().length, 1);
 });
 
@@ -81,7 +81,7 @@ test('las pistas quitadas durante la reproducción se saltan', () => {
   baseList.start('sequential');
   assert.equal(baseList.next().videoId, IDS[0]);
 
-  baseList.removeByVideoId(IDS[1]);
+  baseList.removeByKey(`youtube:${IDS[1]}`);
   assert.equal(baseList.next().videoId, IDS[2]);
   assert.equal(baseList.next().videoId, IDS[0]);
 });
@@ -105,13 +105,13 @@ test('la cola reproduce la lista base cuando se vacía y prioriza las peticiones
   assert.equal(queue.snapshot().current.videoId, IDS[1]);
 });
 
-test('removeByVideoId quita de la cola y avanza si el vídeo está sonando', () => {
+test('removeByKey quita de la cola y avanza si el vídeo está sonando', () => {
   const queue = new PlaybackQueue();
   queue.add({ videoId: IDS[0], title: 'A' });
   queue.add({ videoId: IDS[1], title: 'B' });
   queue.add({ videoId: IDS[0], title: 'A otra vez' });
 
-  assert.equal(queue.removeByVideoId(IDS[0]), 2);
+  assert.equal(queue.removeByKey(`youtube:${IDS[0]}`), 2);
   const { current, queue: pending } = queue.snapshot();
   assert.equal(current.videoId, IDS[1]);
   assert.deepEqual(pending, []);
@@ -138,7 +138,7 @@ test('la lista base y la lista negra se guardan y se recuperan del disco', async
 
     const reloadedBlacklist = new Blacklist({ path: blacklistPath });
     await reloadedBlacklist.load();
-    assert.equal(reloadedBlacklist.has(IDS[2]), true);
+    assert.equal(reloadedBlacklist.has({ videoId: IDS[2] }), true);
 
     assert.equal(JSON.parse(await readFile(blacklistPath, 'utf8'))[0].videoId, IDS[2]);
   } finally {

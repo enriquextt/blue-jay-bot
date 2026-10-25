@@ -1,6 +1,5 @@
 import { createJsonFile } from '../storage/json-file.js';
-
-const VIDEO_ID_PATTERN = /^[\w-]{11}$/;
+import { parseEntry, toEntry, trackKey } from '../tracks.js';
 
 export class Blacklist {
   #file;
@@ -14,34 +13,40 @@ export class Blacklist {
     const stored = await this.#file.read([]);
     if (!Array.isArray(stored)) return;
 
-    for (const entry of stored) {
-      if (VIDEO_ID_PATTERN.test(entry?.videoId) && typeof entry.title === 'string') {
-        this.#entries.set(entry.videoId, { videoId: entry.videoId, title: entry.title });
-      }
+    for (const raw of stored) {
+      const entry = parseEntry(raw);
+      if (entry) this.#entries.set(trackKey(entry), entry);
     }
   }
 
-  has(videoId) {
-    return this.#entries.has(videoId);
+  has(track) {
+    return this.#entries.has(trackKey(track));
   }
 
-  add({ videoId, title }) {
-    if (this.#entries.has(videoId)) return false;
+  hasKey(key) {
+    return this.#entries.has(key);
+  }
 
-    this.#entries.set(videoId, { videoId, title });
+  add(track) {
+    const entry = toEntry(track);
+    const key = trackKey(entry);
+    if (this.#entries.has(key)) return false;
+
+    this.#entries.set(key, entry);
     this.#save();
     return true;
   }
 
-  remove(videoId) {
-    if (!this.#entries.delete(videoId)) return false;
+  remove(key) {
+    if (!this.#entries.delete(key)) return false;
 
     this.#save();
     return true;
   }
 
+  // Cada entrada lleva su `key`, que es lo que el panel envía para quitar el veto.
   list() {
-    return [...this.#entries.values()];
+    return [...this.#entries].map(([key, entry]) => ({ key, ...entry }));
   }
 
   flush() {
@@ -49,6 +54,6 @@ export class Blacklist {
   }
 
   #save() {
-    this.#file.write(this.list());
+    this.#file.write([...this.#entries.values()]);
   }
 }

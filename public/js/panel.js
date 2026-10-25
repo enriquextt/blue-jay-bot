@@ -1,10 +1,12 @@
 import { currentLocale, initI18n, setLocale, t } from './i18n.js';
+import { createLocalPlayer } from './local-player.js';
 import { createPlayer } from './player.js';
 
 const RECONNECT_DELAY_MS = 2000;
 const NOTICE_DURATION_MS = 4000;
 const VOLUME_SEND_INTERVAL_MS = 100;
 const CLEAR_CONFIRM_MS = 3000;
+const SEARCH_DEBOUNCE_MS = 250;
 
 const elements = {
   connection: document.querySelector('#connection'),
@@ -36,12 +38,28 @@ const elements = {
   countQueue: document.querySelector('#count-queue'),
   countBaseList: document.querySelector('#count-baselist'),
   countBanned: document.querySelector('#count-banned'),
+  countLibrary: document.querySelector('#count-library'),
+  playerFrame: document.querySelector('.player-frame'),
+  localAudio: document.querySelector('#local-audio'),
+  libraryForm: document.querySelector('#library-form'),
+  libraryFolder: document.querySelector('#library-folder'),
+  libraryRescan: document.querySelector('#library-rescan'),
+  libraryInclude: document.querySelector('#library-include'),
+  libraryStatus: document.querySelector('#library-status'),
+  librarySearch: document.querySelector('#library-search'),
+  libraryResults: document.querySelector('#library-results'),
+  libraryEmpty: document.querySelector('#library-empty'),
+  libraryShowing: document.querySelector('#library-showing'),
 };
 
 const TAB_STORAGE_KEY = 'blueJay.tab';
 
-let state = { current: null, queue: [], volume: 50, fallback: { active: false, mode: 'sequential' } };
+let state = { current: null, queue: [], volume: 50, fallback: { active: false, mode: 'sequential', includeLibrary: false } };
 let baseListData = { items: [], banned: [] };
+let libraryStatus = { configured: false, folderName: null, status: 'none', count: 0 };
+let libraryResults = { items: [], total: 0 };
+let localPlayer = null;
+let searchTimer = null;
 let connection = 'connecting';
 let socket = null;
 let player = null;
@@ -83,9 +101,14 @@ function setFavoriteButton(button, favorite) {
   button.setAttribute('aria-label', favoriteLabel(favorite));
 }
 
+// Las pistas locales muestran "artista - título"; las de YouTube, solo el título.
+function trackLabel(track) {
+  return track.artist ? `${track.artist} - ${track.title}` : track.title;
+}
+
 function renderNow() {
   const { current } = state;
-  elements.nowTitle.textContent = current?.title ?? t('now.empty');
+  elements.nowTitle.textContent = current ? trackLabel(current) : t('now.empty');
   elements.next.disabled = !current;
 
   setFavoriteButton(elements.nowFavorite, current?.favorite === true);
@@ -148,12 +171,20 @@ function titleSpan(title) {
   return span;
 }
 
+function durationSpan(seconds) {
+  const total = Math.round(seconds);
+  const span = document.createElement('span');
+  span.className = 'duration';
+  span.textContent = `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  return span;
+}
+
 function renderQueue() {
   elements.queue.replaceChildren(...state.queue.map((track) => {
     const item = document.createElement('li');
     item.dataset.id = track.id;
     item.append(
-      titleSpan(track.title),
+      titleSpan(trackLabel(track)),
       favoriteButton(track),
       banButton(track),
       textButton(t('queue.remove'), 'danger', () => send({ type: 'queue.remove', id: track.id })),
@@ -171,7 +202,7 @@ function renderBaseList() {
   elements.baseList.replaceChildren(...items.map((track) => {
     const item = document.createElement('li');
     item.append(
-      titleSpan(track.title),
+      titleSpan(trackLabel(track)),
       favoriteButton(track),
       banButton(track),
       textButton(t('track.remove'), 'danger', () => send({ type: 'baselist.remove', id: track.id })),
@@ -190,8 +221,8 @@ function renderBaseList() {
   elements.banned.replaceChildren(...banned.map((entry) => {
     const item = document.createElement('li');
     item.append(
-      titleSpan(entry.title),
-      textButton(t('banned.unban'), '', () => send({ type: 'ban.remove', videoId: entry.videoId })),
+      titleSpan(trackLabel(entry)),
+      textButton(t('banned.unban'), '', () => send({ type: 'ban.remove', key: entry.key })),
     );
     return item;
   }));
@@ -199,6 +230,51 @@ function renderBaseList() {
 
   elements.countBaseList.textContent = items.length;
   elements.countBanned.textContent = banned.length;
+}
+
+function renderLibrary() {
+  const { configured, folderName, status, count } = libraryStatus;
+  const statusText = {
+    none: t('library.status.none'),
+    scanning: t('library.status.scanning', { folder: folderName }),
+    ready: `${t('library.status.ready', { folder: folderName })} ${t('library.count', { count })}`,
+    error: t('library.status.error'),
+  }[status];
+  elements.libraryStatus.textContent = statusText;
+  elements.libraryRescan.disabled = !configured;
+  elements.libraryInclude.checked = state.fallback.includeLibrary;
+  elements.libraryInclude.disabled = !configured;
+  elements.librarySearch.disabled = !configured;
+  elements.countLibrary.textContent = count;
+
+  const { items, total } = libraryResults;
+  elements.libraryResults.replaceChildren(...items.map((track) => {
+    const item = document.createElement('li');
+    item.append(
+      titleSpan(trackLabel(track)),
+      ...(track.duration ? [durationSpan(track.duration)] : []),
+      iconButton({
+        symbol: '+',
+        label: t('library.addToQueue'),
+        onClick: () => send({ type: 'library.queue', id: track.id }),
+      }),
+      iconButton({
+        symbol: '≡',
+        label: t('library.addToBaseList'),
+        onClick: () => send({ type: 'library.addToBaseList', id: track.id }),
+      }),
+      favoriteButton(track),
+      banButton(track),
+    );
+    return item;
+  }));
+  elements.libraryEmpty.hidden = !configured || items.length > 0;
+  elements.libraryShowing.hidden = total <= items.length;
+  elements.libraryShowing.textContent = t('library.showing', { shown: items.length, total });
+}
+
+function requestSearch() {
+  if (libraryStatus.configured) send({ type: 'library.search', query: elements.librarySearch.value.trim() });
 }
 
 function savedTab() {
@@ -248,18 +324,27 @@ function setupTabs() {
 }
 
 function syncPlayer() {
-  if (!player) return;
+  player?.setVolume(state.volume);
+  localPlayer?.setVolume(state.volume);
 
-  player.setVolume(state.volume);
-
-  const wanted = state.current?.id ?? null;
+  const { current } = state;
+  const wanted = current?.id ?? null;
   if (wanted === loadedId) return;
 
+  // El reproductor de YouTube puede no estar listo todavía: start() vuelve a llamar cuando lo esté.
+  const isLocal = current?.source === 'local';
+  if (current && !isLocal && !player) return;
+  if (isLocal && !localPlayer) return;
+
   loadedId = wanted;
-  if (state.current) {
-    player.load(state.current.videoId);
-  } else {
-    player.stop();
+  player?.stop();
+  localPlayer?.stop();
+  elements.playerFrame.hidden = isLocal;
+
+  if (isLocal) {
+    localPlayer.load(current.localId);
+  } else if (current) {
+    player.load(current.videoId);
   }
 }
 
@@ -270,12 +355,25 @@ function handleMessage(message) {
       renderNow();
       renderQueue();
       renderBaseList();
+      renderLibrary();
       renderVolume();
       syncPlayer();
       break;
     case 'baselist':
       baseListData = message.data;
       renderBaseList();
+      requestSearch();
+      break;
+    case 'library':
+      libraryStatus = message.data;
+      renderLibrary();
+      requestSearch();
+      break;
+    case 'library.results':
+      // Se descartan respuestas de una búsqueda anterior a lo que hay escrito ahora.
+      if (message.query !== elements.librarySearch.value.trim()) break;
+      libraryResults = message;
+      renderLibrary();
       break;
     case 'notice':
       showNotice(t(message.key, message.params));
@@ -332,6 +430,21 @@ function setupBaseListEvents() {
   });
 }
 
+function setupLibraryEvents() {
+  elements.libraryForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    send({ type: 'library.setFolder', path: elements.libraryFolder.value.trim() });
+  });
+  elements.libraryRescan.addEventListener('click', () => send({ type: 'library.rescan' }));
+  elements.libraryInclude.addEventListener('change', () => {
+    send({ type: 'baselist.includeLibrary', enabled: elements.libraryInclude.checked });
+  });
+  elements.librarySearch.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(requestSearch, SEARCH_DEBOUNCE_MS);
+  });
+}
+
 function setupEvents() {
   elements.language.value = currentLocale();
   elements.language.addEventListener('change', () => setLocale(elements.language.value));
@@ -342,6 +455,7 @@ function setupEvents() {
     renderNow();
     renderQueue();
     renderBaseList();
+    renderLibrary();
   });
 
   elements.addForm.addEventListener('submit', (event) => {
@@ -359,6 +473,7 @@ function setupEvents() {
   });
 
   setupBaseListEvents();
+  setupLibraryEvents();
 
   const sendVolume = () => send({ type: 'playback.volume', volume: Number(elements.volume.value) });
   elements.volume.addEventListener('pointerdown', () => { adjustingVolume = true; });
@@ -393,7 +508,20 @@ async function start() {
   renderNow();
   renderQueue();
   renderBaseList();
+  renderLibrary();
   connect();
+
+  localPlayer = createLocalPlayer({
+    element: elements.localAudio,
+    onEnded: () => {
+      if (loadedId) send({ type: 'playback.ended', id: loadedId });
+    },
+    onUnavailable: () => {
+      if (loadedId) send({ type: 'playback.unavailable', id: loadedId });
+    },
+    onBlocked: () => showNotice(t('errors.autoplayBlocked'), 'error'),
+  });
+  syncPlayer();
 
   try {
     player = await createPlayer({

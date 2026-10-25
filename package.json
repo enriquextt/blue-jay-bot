@@ -30,6 +30,7 @@
     "@fastify/static": "^10.1.7",
     "fastify": "^5.12.7",
     "i18next": "^26.5.10",
+    "music-metadata": "^11.16.1",
     "sortablejs": "^1.15.7",
     "ws": "^8.22.0"
   }

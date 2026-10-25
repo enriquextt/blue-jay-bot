@@ -1,40 +1,39 @@
 import { randomUUID } from 'node:crypto';
 import { createJsonFile } from '../storage/json-file.js';
+import { parseEntry, toEntry, trackKey } from '../tracks.js';
 
 export const MAX_ITEMS = 2000;
 export const MODES = ['sequential', 'shuffle'];
 
-const VIDEO_ID_PATTERN = /^[\w-]{11}$/;
-const TITLE_MAX_LENGTH = 200;
-
 // Lista base única: se reproduce cuando la cola de peticiones queda vacía.
+// Puede mezclar pistas de YouTube y de la carpeta local, y opcionalmente toda la biblioteca.
 export class BaseList {
   #file;
+  #library;
+  #isBanned;
   #items = [];
   #active = false;
   #mode = 'sequential';
+  #includeLibrary = false;
   #order = [];
-  #lastPlayedId = null;
+  #lastPlayedKey = null;
 
-  constructor({ path = null, log } = {}) {
+  // `library` ofrece all() y find(id); `isBanned(key)` descarta pistas vetadas de la biblioteca.
+  constructor({ path = null, log, library = null, isBanned = () => false } = {}) {
     this.#file = createJsonFile(path, { log });
+    this.#library = library;
+    this.#isBanned = isBanned;
   }
 
   async load() {
     const stored = await this.#file.read([]);
     if (!Array.isArray(stored)) return;
 
-    for (const entry of stored) {
-      if (!VIDEO_ID_PATTERN.test(entry?.videoId) || typeof entry.title !== 'string') continue;
-      if (this.#items.some((item) => item.videoId === entry.videoId)) continue;
+    for (const raw of stored) {
+      const entry = parseEntry(raw);
+      if (!entry || this.#items.some((item) => trackKey(item) === trackKey(entry))) continue;
 
-      this.#items.push({
-        id: randomUUID(),
-        source: 'youtube',
-        videoId: entry.videoId,
-        title: entry.title.slice(0, TITLE_MAX_LENGTH),
-        favorite: entry.favorite === true,
-      });
+      this.#items.push({ id: randomUUID(), ...entry, favorite: raw.favorite === true });
     }
   }
 
@@ -50,20 +49,18 @@ export class BaseList {
     return this.#items.find((item) => item.id === id) ?? null;
   }
 
-  isFavorite(videoId) {
-    return this.#items.some((item) => item.videoId === videoId && item.favorite);
+  isFavorite(key) {
+    return this.#items.some((item) => trackKey(item) === key && item.favorite);
   }
 
   // Devuelve cuántas pistas se añadieron de verdad (sin duplicados y hasta el límite).
   addMany(entries) {
     let added = 0;
-    for (const { videoId, title } of entries) {
+    for (const entry of entries) {
       if (this.#items.length >= MAX_ITEMS) break;
-      if (this.#items.some((item) => item.videoId === videoId)) continue;
+      if (this.#findByKey(trackKey(entry))) continue;
 
-      const item = { id: randomUUID(), source: 'youtube', videoId, title, favorite: false };
-      this.#items.push(item);
-      this.#order.push(item.id);
+      this.#insert({ ...toEntry(entry), favorite: false });
       added += 1;
     }
     if (added > 0) this.#save();
@@ -74,17 +71,15 @@ export class BaseList {
     return this.#items.length >= MAX_ITEMS;
   }
 
-  // Marca o desmarca un favorito. Si la canción no está en la lista base y se marca, entra en ella.
-  setFavorite({ videoId, title }, favorite) {
-    const existing = this.#items.find((item) => item.videoId === videoId);
+  // Marca o desmarca un favorito. Si la pista no está en la lista base y se marca, entra en ella.
+  setFavorite(track, favorite) {
+    const existing = this.#findByKey(trackKey(track));
     if (existing) {
       if (existing.favorite === favorite) return true;
       existing.favorite = favorite;
     } else if (favorite) {
       if (this.isFull()) return false;
-      const item = { id: randomUUID(), source: 'youtube', videoId, title, favorite: true };
-      this.#items.push(item);
-      this.#order.push(item.id);
+      this.#insert({ ...toEntry(track), favorite: true });
     } else {
       return true;
     }
@@ -102,8 +97,8 @@ export class BaseList {
     return true;
   }
 
-  removeByVideoId(videoId) {
-    const index = this.#items.findIndex((item) => item.videoId === videoId);
+  removeByKey(key) {
+    const index = this.#items.findIndex((item) => trackKey(item) === key);
     if (index === -1) return false;
 
     this.#items.splice(index, 1);
@@ -121,7 +116,7 @@ export class BaseList {
     this.#mode = MODES.includes(mode) ? mode : 'sequential';
     this.#active = true;
     this.#order = [];
-    this.#lastPlayedId = null;
+    this.#lastPlayedKey = null;
   }
 
   stop() {
@@ -129,21 +124,27 @@ export class BaseList {
     this.#order = [];
   }
 
-  status() {
-    return { active: this.#active, mode: this.#mode };
+  setIncludeLibrary(enabled) {
+    this.#includeLibrary = enabled;
+    this.#order = [];
   }
 
-  // Siguiente pista de la lista base, o null si está parada o vacía.
+  status() {
+    return { active: this.#active, mode: this.#mode, includeLibrary: this.#includeLibrary };
+  }
+
+  // Siguiente pista de la lista base, o null si está parada o no hay nada que poner.
   next() {
     if (!this.#active) return null;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       while (this.#order.length > 0) {
-        const item = this.find(this.#order.shift());
-        if (!item) continue;
+        const key = this.#order.shift();
+        const entry = this.#resolve(key);
+        if (!entry) continue;
 
-        this.#lastPlayedId = item.id;
-        return { videoId: item.videoId, title: item.title };
+        this.#lastPlayedKey = key;
+        return entry;
       }
       this.#order = this.#buildOrder();
       if (this.#order.length === 0) return null;
@@ -155,20 +156,56 @@ export class BaseList {
     return this.#file.flush();
   }
 
-  #buildOrder() {
-    const ids = this.list().map((item) => item.id);
-    if (this.#mode === 'sequential') return ids;
+  #findByKey(key) {
+    return this.#items.find((item) => trackKey(item) === key) ?? null;
+  }
 
-    for (let i = ids.length - 1; i > 0; i -= 1) {
+  #insert(entry) {
+    const item = { id: randomUUID(), ...entry };
+    this.#items.push(item);
+    this.#order.push(trackKey(item));
+  }
+
+  // Pista reproducible para una clave, o null si ya no existe, está vetada o su archivo no está en la biblioteca.
+  #resolve(key) {
+    if (this.#isBanned(key)) return null;
+
+    const item = this.#findByKey(key);
+    if (item?.source === 'local') {
+      const track = this.#library?.find(item.localId);
+      return track ? toEntry(track) : null;
+    }
+    if (item) return toEntry(item);
+
+    if (this.#includeLibrary && key.startsWith('local:')) {
+      const track = this.#library?.find(key.slice('local:'.length));
+      return track ? toEntry(track) : null;
+    }
+    return null;
+  }
+
+  #buildOrder() {
+    const keys = this.list().map(trackKey);
+
+    if (this.#includeLibrary && this.#library) {
+      const seen = new Set(keys);
+      for (const track of this.#library.all()) {
+        const key = trackKey(track);
+        if (!seen.has(key)) keys.push(key);
+      }
+    }
+    if (this.#mode === 'sequential') return keys;
+
+    for (let i = keys.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
-      [ids[i], ids[j]] = [ids[j], ids[i]];
+      [keys[i], keys[j]] = [keys[j], keys[i]];
     }
     // Evita repetir la última canción al empezar un ciclo nuevo.
-    if (ids.length > 1 && ids[0] === this.#lastPlayedId) [ids[0], ids[1]] = [ids[1], ids[0]];
-    return ids;
+    if (keys.length > 1 && keys[0] === this.#lastPlayedKey) [keys[0], keys[1]] = [keys[1], keys[0]];
+    return keys;
   }
 
   #save() {
-    this.#file.write(this.#items.map(({ videoId, title, favorite }) => ({ videoId, title, favorite })));
+    this.#file.write(this.#items.map((item) => ({ ...toEntry(item), favorite: item.favorite })));
   }
 }

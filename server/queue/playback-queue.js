@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { toEntry, trackKey } from '../tracks.js';
 
 const DEFAULT_VOLUME = 50;
 
@@ -8,13 +9,13 @@ export class PlaybackQueue {
   #volume = DEFAULT_VOLUME;
   #fallback;
 
-  // `fallback` devuelve { videoId, title } cuando la cola se vacía, o null si no hay nada que poner.
+  // `fallback` devuelve la entrada de una pista (ver `toEntry`) cuando la cola se vacía, o null si no hay nada que poner.
   constructor({ fallback = () => null } = {}) {
     this.#fallback = fallback;
   }
 
-  add({ videoId, title, requestedBy = null }) {
-    const track = { id: randomUUID(), source: 'youtube', origin: 'request', videoId, title, requestedBy };
+  add({ requestedBy = null, ...entry }) {
+    const track = { id: randomUUID(), origin: 'request', requestedBy, ...toEntry(entry) };
     this.#items.push(track);
     if (!this.#current) this.advance();
     return track;
@@ -33,16 +34,16 @@ export class PlaybackQueue {
     return true;
   }
 
-  // Quita de la cola todas las apariciones del vídeo; si suena ahora, pasa a la siguiente.
-  removeByVideoId(videoId) {
+  // Quita de la cola todas las apariciones de la pista; si suena ahora, pasa a la siguiente.
+  removeByKey(key) {
     let removed = 0;
     this.#items = this.#items.filter((track) => {
-      if (track.videoId !== videoId) return true;
+      if (trackKey(track) !== key) return true;
       removed += 1;
       return false;
     });
 
-    if (this.#current?.videoId === videoId) {
+    if (this.#current && trackKey(this.#current) === key) {
       this.advance();
       removed += 1;
     }
@@ -89,7 +90,7 @@ export class PlaybackQueue {
     const entry = this.#fallback();
     if (!entry) return null;
 
-    return { id: randomUUID(), source: 'youtube', origin: 'base', videoId: entry.videoId, title: entry.title, requestedBy: null };
+    return { id: randomUUID(), origin: 'base', requestedBy: null, ...toEntry(entry) };
   }
 
   snapshot() {

@@ -36,7 +36,10 @@
     "playlistFailed": "The playlist could not be read. Check that it is public and the API key.",
     "playlistEmpty": "The playlist has no available songs.",
     "trackBanned": "That song is blacklisted.",
-    "baseListFull": "The base list is full."
+    "baseListFull": "The base list is full.",
+    "localOnly": "The folder can only be changed from the computer running the server.",
+    "folderInvalid": "The folder does not exist, is not an absolute path or cannot be read.",
+    "autoplayBlocked": "The browser blocked autoplay. Press play on the player."
   },
   "notices": {
     "skippedUnavailable": "Skipped, unavailable: {{title}}",
@@ -84,6 +87,11 @@
       "current": "Volume: {{volume}}%.",
       "set": "Volume set to {{volume}}%.",
       "invalid": "@{{user}}, the volume must be a whole number from 0 to 100."
+    },
+    "local": {
+      "usage": "@{{user}}, use !local followed by the title, the artist or a word from the song description.",
+      "disabled": "@{{user}}, the local library is not available right now.",
+      "notFound": "@{{user}}, I found no local track for \"{{query}}\". If the title is short, also add the artist or the album."
     }
   },
   "track": {
@@ -114,5 +122,25 @@
     "title": "Blacklist",
     "empty": "No banned songs.",
     "unban": "Unban"
+  },
+  "library": {
+    "title": "Local library",
+    "folderPlaceholder": "Music folder path, for example C:\\Music",
+    "folderSave": "Save folder",
+    "rescan": "Rescan",
+    "include": "Include the library in the base list",
+    "searchPlaceholder": "Search by title, artist, album, comment or description",
+    "empty": "No tracks to show.",
+    "addToQueue": "Add to queue",
+    "count_one": "{{count}} track.",
+    "count_other": "{{count}} tracks.",
+    "showing": "Showing {{shown}} of {{total}}. Refine the search to see the rest.",
+    "status": {
+      "none": "No folder configured.",
+      "scanning": "Scanning \"{{folder}}\"…",
+      "ready": "Folder \"{{folder}}\".",
+      "error": "The music folder could not be read."
+    },
+    "addToBaseList": "Add to base list"
   }
 }

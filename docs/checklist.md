@@ -33,7 +33,8 @@ Leyenda de la columna de decisión:
 
 ## 3. Comandos de chat
 
-- [x] `!sr [enlace/título]` para pedir canciones — **Adaptar** (enlace, ID o búsqueda por título con la clave de YouTube Data API)
+- [x] `!sr [enlace/título]` para pedir canciones — **Adaptar** (enlace, ID o búsqueda por título con la clave de YouTube Data API). Fase 4.5: si el texto no es un enlace ni un ID, se busca primero en la biblioteca local y solo si no hay coincidencia se consulta YouTube. La búsqueda del chat es estricta: si la palabra solo coincide con una etiqueta de menos de 10 caracteres, hace falta que coincida también el artista o el álbum
+- [x] `!local [texto]` para pedir una pista solo de la biblioteca local — **Mantener** (requerimiento nuevo, fase 4.5). Busca por título, artista, álbum, comentario o descripción
 - [x] `!when` para ver cuándo sonará la próxima canción del viewer — **Mantener**
 - [x] `!queue` para ver la canción actual y las 10 siguientes — **Mantener**
 - [x] `!voteskip` para votar saltar la canción — **Mantener**
@@ -63,11 +64,14 @@ Leyenda de la columna de decisión:
 
 ## 6. Biblioteca local (nueva)
 
-- [ ] Elegir una carpeta local con música — **Mantener** (requerimiento nuevo)
-- [ ] Escaneo recursivo de la carpeta y detección de cambios — **Mantener** (requerimiento nuevo)
-- [ ] Reproducir archivos locales en el panel y en la lista base — **Mantener** (requerimiento nuevo)
-- [ ] Buscar y añadir pistas locales a la cola por título o artista — **Mantener** (requerimiento nuevo)
-- [ ] Usar la carpeta local como lista base de fallback — **Mantener** (requerimiento nuevo)
+- [x] Elegir una carpeta local con música — **Mantener** (requerimiento nuevo). Se indica en la pestaña Biblioteca local, solo desde el equipo del servidor, y se guarda en `data/library.json`
+- [x] Escaneo recursivo de la carpeta y detección de cambios — **Mantener** (requerimiento nuevo). Formatos `.mp3`, `.flac`, `.ogg`, `.m4a` y `.wav`; los cambios se detectan con `fs.watch`
+- [x] Reproducir archivos locales en el panel y en la lista base — **Mantener** (requerimiento nuevo)
+- [x] Buscar y añadir pistas locales a la cola por título o artista — **Mantener** (requerimiento nuevo). Desde el panel y, desde la fase 4.5, por chat con `!local` y `!sr`
+- [x] Usar la carpeta local como lista base de fallback — **Mantener** (requerimiento nuevo). Casilla «Incluir la biblioteca en la lista base»; también se pueden marcar pistas sueltas como favoritas
+- [x] Leer etiquetas (ID3, Vorbis, MP4…): título, artista, álbum y duración reales — **Mantener** (fase 4.5). Con `music-metadata`; si un archivo no tiene etiquetas, título y artista salen del nombre del archivo y de la carpeta
+- [x] Buscar también en comentario, descripción y subtítulo, que sirven de títulos alternativos — **Mantener** (fase 4.5). La búsqueda ordena por relevancia: título, luego artista y luego notas
+- [x] Añadir una pista suelta de la biblioteca a la lista base sin marcarla como favorita — **Mantener** (fase 4.5)
 
 ## 7. Panel de control de la lista de reproducción (nuevo)
 

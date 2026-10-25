@@ -36,7 +36,10 @@
     "playlistFailed": "No se pudo leer la playlist. Revisa que sea pública y la clave de API.",
     "playlistEmpty": "La playlist no tiene canciones disponibles.",
     "trackBanned": "Esa canción está en la lista negra.",
-    "baseListFull": "La lista base está llena."
+    "baseListFull": "La lista base está llena.",
+    "localOnly": "La carpeta solo se puede cambiar desde el equipo donde corre el servidor.",
+    "folderInvalid": "La carpeta no existe, no es una ruta absoluta o no se puede leer.",
+    "autoplayBlocked": "El navegador bloqueó la reproducción automática. Pulsa play en el reproductor."
   },
   "notices": {
     "skippedUnavailable": "Saltada, no disponible: {{title}}",
@@ -84,6 +87,11 @@
       "current": "Volumen: {{volume}}%.",
       "set": "Volumen ajustado a {{volume}}%.",
       "invalid": "@{{user}}, el volumen debe ser un número entero entre 0 y 100."
+    },
+    "local": {
+      "usage": "@{{user}}, usa !local seguido del título, el artista o una palabra de la descripción de la canción.",
+      "disabled": "@{{user}}, la biblioteca local no está disponible ahora mismo.",
+      "notFound": "@{{user}}, no encontré ninguna pista local para «{{query}}». Si el título es corto, añade también el artista o el álbum."
     }
   },
   "track": {
@@ -114,5 +122,25 @@
     "title": "Lista negra",
     "empty": "No hay canciones vetadas.",
     "unban": "Quitar veto"
+  },
+  "library": {
+    "title": "Biblioteca local",
+    "folderPlaceholder": "Ruta de la carpeta de música, por ejemplo C:\\Música",
+    "folderSave": "Guardar carpeta",
+    "rescan": "Reescanear",
+    "include": "Incluir la biblioteca en la lista base",
+    "searchPlaceholder": "Buscar por título, artista, álbum, comentario o descripción",
+    "empty": "No hay pistas que mostrar.",
+    "addToQueue": "Añadir a la cola",
+    "count_one": "{{count}} pista.",
+    "count_other": "{{count}} pistas.",
+    "showing": "Mostrando {{shown}} de {{total}}. Afina la búsqueda para ver el resto.",
+    "status": {
+      "none": "Sin carpeta configurada.",
+      "scanning": "Escaneando «{{folder}}»…",
+      "ready": "Carpeta «{{folder}}».",
+      "error": "No se pudo leer la carpeta de música."
+    },
+    "addToBaseList": "Añadir a la lista base"
   }
 }

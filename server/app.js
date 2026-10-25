@@ -8,7 +8,9 @@ import { Blacklist } from './baselist/blacklist.js';
 import { createTwitchAdapter, loadCredentials } from './chat/twitch.js';
 import { createCommands } from './commands/index.js';
 import { createTranslator } from './i18n/index.js';
+import { Library } from './library/library.js';
 import { PlaybackQueue } from './queue/playback-queue.js';
+import { trackKey } from './tracks.js';
 import { createChannel } from './ws/channel.js';
 import { fetchPlaylistVideos, fetchVideoTitle, searchVideoId } from './youtube/youtube.js';
 
@@ -25,16 +27,20 @@ export async function createServer({
   youtubeCredentialsPath = null,
   baseListPath = null,
   blacklistPath = null,
+  libraryConfigPath = null,
+  watchLibrary = true,
+  readTags,
   log = () => {},
   fetchTitle = (videoId) => fetchVideoTitle(videoId),
 }) {
   const app = Fastify({ logger: false });
-  const baseList = new BaseList({ path: baseListPath, log });
   const blacklist = new Blacklist({ path: blacklistPath, log });
-  await Promise.all([baseList.load(), blacklist.load()]);
+  const library = new Library({ configPath: libraryConfigPath, log, watch: watchLibrary, readTags });
+  const baseList = new BaseList({ path: baseListPath, log, library, isBanned: (key) => blacklist.hasKey(key) });
+  await Promise.all([baseList.load(), blacklist.load(), library.load()]);
   const queue = new PlaybackQueue({ fallback: () => baseList.next() });
 
-  const withFavorite = (track) => track && { ...track, favorite: baseList.isFavorite(track.videoId) };
+  const withFavorite = (track) => track && { ...track, favorite: baseList.isFavorite(trackKey(track)) };
   const getState = () => {
     const { current, queue: pending, volume } = queue.snapshot();
     return { current: withFavorite(current), queue: pending.map(withFavorite), volume, fallback: baseList.status() };
@@ -55,6 +61,13 @@ export async function createServer({
   app.get('/api/state', async () => getState());
   app.get('/api/baselist', async () => ({ items: baseList.list(), banned: blacklist.list() }));
 
+  // El cliente solo conoce el id de la pista; la ruta sale del índice del servidor.
+  app.get('/media/:id', async (request, reply) => {
+    const relPath = await library.resolve(request.params.id);
+    if (!relPath) return reply.code(404).send();
+    return reply.sendFile(relPath, library.root);
+  });
+
   await app.listen({ host, port });
 
   const youtube = youtubeCredentialsPath ? await loadCredentials(youtubeCredentialsPath) : null;
@@ -66,6 +79,7 @@ export async function createServer({
     queue,
     baseList,
     blacklist,
+    library,
     getState,
     fetchTitle,
     listPlaylist: youtube?.apiKey ? (playlistId) => fetchPlaylistVideos(playlistId, youtube.apiKey) : null,
@@ -74,6 +88,7 @@ export async function createServer({
   const commands = createCommands({
     queue,
     blacklist,
+    library,
     fetchTitle,
     searchVideo: youtube?.apiKey ? (query) => searchVideoId(query, youtube.apiKey) : null,
     t: await createTranslator(language),
@@ -84,11 +99,13 @@ export async function createServer({
 
   return {
     app,
+    library,
     async close() {
       twitch?.stop();
+      library.close();
       wss.close();
       await app.close();
-      await Promise.all([baseList.flush(), blacklist.flush()]);
+      await Promise.all([baseList.flush(), blacklist.flush(), library.flush()]);
     },
   };
 }
