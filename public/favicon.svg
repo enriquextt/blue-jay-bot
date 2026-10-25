@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Blue Jay Bot">
+  <defs>
+    <clipPath id="body"><path id="body-shape" d="M12 38c0-9 8-15 21-15 9 0 16 6 16 14 0 10-8 17-20 17-10 0-17-6-17-16z"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#1c212b"/>
+  <!-- cola -->
+  <path d="M19 41 4 52l4 6 18-8z" fill="#2f5fd0"/>
+  <path d="M4 52l4 6 4-1.6-3.6-6z" fill="#e8ecf3"/>
+  <!-- cuerpo y pecho -->
+  <use href="#body-shape" fill="#4f8cff"/>
+  <ellipse cx="43" cy="47" rx="10" ry="10" fill="#e8ecf3" clip-path="url(#body)"/>
+  <!-- cresta y cabeza -->
+  <path d="M36 20 29 4l16 9z" fill="#4f8cff"/>
+  <circle cx="43" cy="25" r="11" fill="#4f8cff"/>
+  <!-- garganta y collar -->
+  <path d="M45 29c3 0 6-1 8-3-1 5-4 8-9 8z" fill="#e8ecf3"/>
+  <path d="M35 33c4 4 11 4 17-1" fill="none" stroke="#0b0e14" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- ala -->
+  <path d="M14 38c6-9 16-9 23 1-6 8-17 8-23-1z" fill="#2f5fd0"/>
+  <path d="M20 38l10 5M24 34l10 6" stroke="#e8ecf3" stroke-width="2" stroke-linecap="round"/>
+  <!-- pico y ojo -->
+  <path d="M52 22l9 4-9 4z" fill="#ffc53d"/>
+  <circle cx="45" cy="22" r="2" fill="#0b0e14"/>
+  <circle cx="45.7" cy="21.3" r=".7" fill="#fff"/>
+</svg>

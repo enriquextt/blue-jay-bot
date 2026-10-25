@@ -1,4 +1,5 @@
 import { currentLocale, initI18n, setLocale, t } from './i18n.js';
+import { icon } from './icons.js';
 import { createLocalPlayer } from './local-player.js';
 import { createPlayer } from './player.js';
 
@@ -28,6 +29,7 @@ const elements = {
   baseListShuffle: document.querySelector('#baselist-shuffle'),
   baseListStop: document.querySelector('#baselist-stop'),
   baseListClear: document.querySelector('#baselist-clear'),
+  baseListClearLabel: document.querySelector('#baselist-clear span'),
   baseListStatus: document.querySelector('#baselist-status'),
   baseListCount: document.querySelector('#baselist-count'),
   baseList: document.querySelector('#baselist'),
@@ -95,7 +97,7 @@ function favoriteLabel(favorite) {
 }
 
 function setFavoriteButton(button, favorite) {
-  button.textContent = favorite ? '★' : '☆';
+  button.replaceChildren(icon('star', { filled: favorite }));
   button.classList.toggle('active', favorite);
   button.title = favoriteLabel(favorite);
   button.setAttribute('aria-label', favoriteLabel(favorite));
@@ -123,12 +125,12 @@ function renderVolume() {
   elements.volumeValue.textContent = `${elements.volume.value}%`;
 }
 
-// Botón con símbolo y texto accesible (título y aria-label).
-function iconButton({ symbol, label, className = '', onClick }) {
+// Botón con icono y texto accesible (título y aria-label).
+function iconButton({ name, label, className = '', onClick }) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `icon ${className}`.trim();
-  button.textContent = symbol;
+  button.replaceChildren(icon(name));
   button.title = label;
   button.setAttribute('aria-label', label);
   button.addEventListener('click', onClick);
@@ -137,7 +139,7 @@ function iconButton({ symbol, label, className = '', onClick }) {
 
 function favoriteButton(track) {
   const button = iconButton({
-    symbol: '☆',
+    name: 'star',
     label: favoriteLabel(track.favorite),
     onClick: () => send({ type: 'favorite.set', id: track.id, favorite: !track.favorite }),
   });
@@ -147,7 +149,7 @@ function favoriteButton(track) {
 
 function banButton(track) {
   return iconButton({
-    symbol: '⛔',
+    name: 'ban',
     label: t('track.ban'),
     className: 'danger',
     onClick: () => send({ type: 'ban.add', id: track.id }),
@@ -254,12 +256,12 @@ function renderLibrary() {
       titleSpan(trackLabel(track)),
       ...(track.duration ? [durationSpan(track.duration)] : []),
       iconButton({
-        symbol: '+',
+        name: 'plus',
         label: t('library.addToQueue'),
         onClick: () => send({ type: 'library.queue', id: track.id }),
       }),
       iconButton({
-        symbol: '≡',
+        name: 'listAdd',
         label: t('library.addToBaseList'),
         onClick: () => send({ type: 'library.addToBaseList', id: track.id }),
       }),
@@ -417,15 +419,15 @@ function setupBaseListEvents() {
     if (clearTimer) {
       clearTimeout(clearTimer);
       clearTimer = null;
-      elements.baseListClear.textContent = t('baselist.clear');
+      elements.baseListClearLabel.textContent = t('baselist.clear');
       send({ type: 'baselist.clear' });
       return;
     }
 
-    elements.baseListClear.textContent = t('baselist.clearConfirm');
+    elements.baseListClearLabel.textContent = t('baselist.clearConfirm');
     clearTimer = setTimeout(() => {
       clearTimer = null;
-      elements.baseListClear.textContent = t('baselist.clear');
+      elements.baseListClearLabel.textContent = t('baselist.clear');
     }, CLEAR_CONFIRM_MS);
   });
 }
@@ -443,6 +445,23 @@ function setupLibraryEvents() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(requestSearch, SEARCH_DEBOUNCE_MS);
   });
+}
+
+// Los botones con texto llevan el icono delante; el texto va en un <span> para que i18n no lo borre.
+const BUTTON_ICONS = {
+  '#next': 'skipNext',
+  '#baselist-start': 'play',
+  '#baselist-shuffle': 'shuffle',
+  '#baselist-stop': 'stop',
+  '#baselist-clear': 'trash',
+  '#library-rescan': 'refresh',
+};
+
+function setupIcons() {
+  for (const [selector, name] of Object.entries(BUTTON_ICONS)) {
+    document.querySelector(selector).prepend(icon(name));
+  }
+  elements.nowBan.replaceChildren(icon('ban'));
 }
 
 function setupEvents() {
@@ -501,6 +520,7 @@ function setupSortable() {
 
 async function start() {
   await initI18n();
+  setupIcons();
   setupEvents();
   setupTabs();
   setupSortable();

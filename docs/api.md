@@ -199,13 +199,13 @@ Cada adaptador (`server/chat/`) entrega al núcleo:
 ### 6.3 Twitch
 
 - Conexión IRC sobre WebSocket (`wss://irc-ws.chat.twitch.tv`) con los permisos `chat:read` y `chat:edit`.
-- Configuración en `data/twitch.json` (ignorado por git): `channel`, `login`, `clientId`, `clientSecret` y `token`. Si el archivo no existe, el chat queda desactivado.
+- Configuración en `data/twitch.json` (ignorado por git): `channel`, `login`, `clientId`, `clientSecret` y `token`. Si el archivo no existe, el chat queda desactivado. Cómo conseguir cada valor: [`credenciales-twitch.md`](credenciales-twitch.md).
 - Si Twitch rechaza el token, el servidor lo renueva con el `refresh_token` y reescribe el archivo.
 
 ### 6.4 Búsqueda en YouTube
 
 - Usa `search.list` de YouTube Data API v3 con `type=video`, `videoEmbeddable=true` y `maxResults=1`. Cada búsqueda cuesta 100 unidades de cuota (el límite diario por defecto es 10.000, unas 100 búsquedas al día).
-- La clave está en `data/youtube.json` (`{ "apiKey": "…" }`, ignorado por git). Sin clave, `!sr` solo acepta enlaces e IDs.
+- La clave está en `data/youtube.json` (`{ "apiKey": "…" }`, ignorado por git). Sin clave, `!sr` solo acepta enlaces e IDs. Cómo conseguirla: [`clave-youtube.md`](clave-youtube.md).
 - Si la API falla (cuota agotada, clave inválida o red), el bot responde con un aviso y no toca la cola.
 
 ## 7. Pendiente

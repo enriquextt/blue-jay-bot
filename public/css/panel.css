@@ -137,6 +137,17 @@ input {
   font: inherit;
 }
 
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+button svg {
+  flex: none;
+}
+
 button,
 select {
   padding: 10px 14px;
@@ -216,6 +227,10 @@ button.icon {
 
 button.icon.active {
   color: #ffc53d;
+}
+
+button.icon.danger {
+  background: var(--danger);
 }
 
 button[aria-pressed="true"] {
