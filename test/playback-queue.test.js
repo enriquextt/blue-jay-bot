@@ -62,3 +62,63 @@ test('advance con la cola vacía deja current en null', () => {
 
   assert.equal(queue.snapshot().current, null);
 });
+
+test('onPlay se llama cada vez que una pista empieza a sonar, pero no al restaurar', () => {
+  const played = [];
+  const queue = new PlaybackQueue({ onPlay: (track) => played.push(track.title) });
+  queue.add({ videoId: 'a', title: 'A' });
+  queue.add({ videoId: 'b', title: 'B' });
+  queue.advance();
+  queue.advance();
+  assert.deepEqual(played, ['A', 'B']);
+
+  queue.restore({ current: { source: 'youtube', videoId: 'c', title: 'C', origin: 'request', requestedBy: null } });
+  assert.deepEqual(played, ['A', 'B']);
+});
+
+test('restore recupera la cola con su origen, quien la pidió y el volumen', () => {
+  const queue = new PlaybackQueue();
+  queue.restore({
+    current: { source: 'youtube', videoId: 'a', title: 'A', origin: 'base', requestedBy: null },
+    queue: [{ source: 'youtube', videoId: 'b', title: 'B', origin: 'request', requestedBy: 'twitch:ana' }],
+    volume: 80,
+  });
+
+  const { current, queue: pending, volume } = queue.snapshot();
+  assert.equal(current.origin, 'base');
+  assert.equal(pending[0].requestedBy, 'twitch:ana');
+  assert.equal(volume, 80);
+  assert.notEqual(current.id, pending[0].id);
+});
+
+test('clear vacía las pendientes sin tocar la que suena y activeRequests cuenta solo peticiones', () => {
+  const queue = new PlaybackQueue();
+  queue.add({ videoId: 'a', title: 'A', requestedBy: 'twitch:ana' });
+  queue.add({ videoId: 'b', title: 'B', requestedBy: 'twitch:ana' });
+  queue.add({ videoId: 'c', title: 'C', requestedBy: 'twitch:bea' });
+
+  assert.equal(queue.activeRequests(), 3);
+  assert.equal(queue.activeRequests('twitch:ana'), 2);
+  assert.equal(queue.clear(), 2);
+  assert.equal(queue.snapshot().current.title, 'A');
+  assert.equal(queue.activeRequests('twitch:ana'), 1);
+});
+
+test('replaceCurrent cambia la pista que suena conservando origen y petición, y avisa con onPlay', () => {
+  const played = [];
+  const queue = new PlaybackQueue({ onPlay: (track) => played.push(track.title) });
+  queue.add({ videoId: 'a', title: 'A', requestedBy: 'twitch:ana' });
+  queue.add({ videoId: 'b', title: 'B' });
+  const { current } = queue.snapshot();
+
+  const replaced = queue.replaceCurrent(current.id, { source: 'local', localId: 'c'.repeat(24), title: 'C', artist: 'Artista' });
+  assert.equal(replaced.title, 'C');
+  assert.equal(replaced.requestedBy, 'twitch:ana');
+  assert.equal(replaced.origin, 'request');
+  assert.notEqual(replaced.id, current.id);
+  assert.deepEqual(titles(queue), ['B']);
+  assert.deepEqual(played, ['A', 'C']);
+
+  assert.equal(queue.replaceCurrent(current.id, { videoId: 'd', title: 'D' }), null);
+  assert.equal(queue.snapshot().current.title, 'C');
+});

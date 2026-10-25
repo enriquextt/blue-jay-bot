@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchPlaylistVideos, fetchVideoTitle, parsePlaylistId, parseVideoId, searchVideoId } from '../server/youtube/youtube.js';
+import { fetchPlaylistVideos, fetchVideoInfo, fetchVideoTitle, parsePlaylistId, parseVideoId, searchVideoId } from '../server/youtube/youtube.js';
 
 const ID = 'dQw4w9WgXcQ';
 
@@ -115,4 +115,29 @@ test('fetchPlaylistVideos recorre las páginas y descarta vídeos privados o eli
 
 test('fetchPlaylistVideos lanza si la API falla', async () => {
   await assert.rejects(fetchPlaylistVideos(PLAYLIST, 'CLAVE', async () => ({ ok: false, status: 404 })), /404/);
+});
+
+test('fetchVideoInfo devuelve el título y si se puede incrustar', async () => {
+  const urls = [];
+  const respond = (item) => async (url) => {
+    urls.push(String(url));
+    return { ok: true, json: async () => ({ items: item ? [item] : [] }) };
+  };
+
+  const embeddable = await fetchVideoInfo(ID, 'CLAVE', respond({ snippet: { title: 'Título' }, status: { embeddable: true } }));
+  assert.deepEqual(embeddable, { title: 'Título', embeddable: true });
+  assert.match(urls[0], /videos\?/);
+  assert.match(urls[0], /id=dQw4w9WgXcQ/);
+  assert.match(urls[0], /key=CLAVE/);
+
+  const blocked = await fetchVideoInfo(ID, 'CLAVE', respond({ snippet: { title: 'Bloqueado' }, status: { embeddable: false } }));
+  assert.deepEqual(blocked, { title: 'Bloqueado', embeddable: false });
+
+  // Sin el dato de `embeddable` no se asume que esté bloqueado.
+  assert.equal((await fetchVideoInfo(ID, 'CLAVE', respond({ snippet: { title: 'T' } }))).embeddable, true);
+  assert.equal(await fetchVideoInfo(ID, 'CLAVE', respond(null)), null);
+});
+
+test('fetchVideoInfo lanza si la API falla', async () => {
+  await assert.rejects(fetchVideoInfo(ID, 'CLAVE', async () => ({ ok: false, status: 403 })), /403/);
 });

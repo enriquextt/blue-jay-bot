@@ -9,5 +9,6 @@ export const config = {
   youtubeCredentialsPath: fileURLToPath(new URL('../../data/youtube.json', import.meta.url)),
   baseListPath: fileURLToPath(new URL('../../data/baselist.json', import.meta.url)),
   blacklistPath: fileURLToPath(new URL('../../data/blacklist.json', import.meta.url)),
+  databasePath: fileURLToPath(new URL('../../data/blue-jay.db', import.meta.url)),
   libraryConfigPath: fileURLToPath(new URL('../../data/library.json', import.meta.url)),
 };

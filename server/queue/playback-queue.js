@@ -8,10 +8,22 @@ export class PlaybackQueue {
   #current = null;
   #volume = DEFAULT_VOLUME;
   #fallback;
+  #onPlay;
 
   // `fallback` devuelve la entrada de una pista (ver `toEntry`) cuando la cola se vacía, o null si no hay nada que poner.
-  constructor({ fallback = () => null } = {}) {
+  // `onPlay(pista)` se llama cada vez que una pista empieza a sonar.
+  constructor({ fallback = () => null, onPlay = () => {} } = {}) {
     this.#fallback = fallback;
+    this.#onPlay = onPlay;
+  }
+
+  // Recupera la cola guardada: pistas con su origen y quien las pidió (ver `PlayerState`). No cuenta como empezar a sonar.
+  restore({ current = null, queue = [], volume = null }) {
+    const revive = ({ requestedBy, origin, ...entry }) => ({ id: randomUUID(), origin, requestedBy, ...toEntry(entry) });
+
+    this.#current = current ? revive(current) : null;
+    this.#items = queue.map(revive);
+    if (volume !== null) this.#volume = volume;
   }
 
   add({ requestedBy = null, ...entry }) {
@@ -67,7 +79,32 @@ export class PlaybackQueue {
 
   advance() {
     this.#current = this.#items.shift() ?? this.#nextFromFallback();
+    if (this.#current) this.#onPlay(this.#current);
     return this.#current;
+  }
+
+  // Cambia la pista que suena por otra, conservando su origen y quien la pidió (por ejemplo, un vídeo que no se
+  // puede reproducir por su versión local). Devuelve la pista nueva, o null si `id` ya no es la que suena.
+  replaceCurrent(id, entry) {
+    if (this.#current?.id !== id) return null;
+
+    const { origin, requestedBy } = this.#current;
+    this.#current = { id: randomUUID(), origin, requestedBy, ...toEntry(entry) };
+    this.#onPlay(this.#current);
+    return this.#current;
+  }
+
+  // Vacía las canciones pendientes; la que suena no se interrumpe.
+  clear() {
+    const cleared = this.#items.length;
+    this.#items = [];
+    return cleared;
+  }
+
+  // Peticiones sin sonar todavía más la que suena ahora, de un usuario o de todos. Cuentan contra los límites.
+  activeRequests(requestedBy = null) {
+    const active = this.#current ? [this.#current, ...this.#items] : this.#items;
+    return active.filter((track) => track.origin === 'request' && (requestedBy === null || track.requestedBy === requestedBy)).length;
   }
 
   finish(id) {

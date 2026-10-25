@@ -50,10 +50,25 @@ body {
 
 main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  align-items: start;
   gap: 16px;
-  max-width: 880px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 16px;
+}
+
+.col-side,
+.col-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  main {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .card {
@@ -87,16 +102,18 @@ main {
   border: 0;
 }
 
-.now-row {
+.now-actions {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.now-actions #next {
+  flex: 1;
 }
 
 .now-title {
-  flex: 1;
-  margin: 0;
+  margin: 12px 0 0;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -332,8 +349,7 @@ button[aria-pressed="true"] {
     margin-left: 0;
   }
 
-  .add-form,
-  .now-row {
+  .add-form {
     flex-direction: column;
     align-items: stretch;
   }
@@ -371,4 +387,212 @@ button[aria-pressed="true"] {
   color: var(--muted);
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
+}
+
+.tablist {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.chat-toggle {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.chat-toggle.off {
+  color: #ffc53d;
+  outline: 1px solid #ffc53d;
+}
+
+.section-title {
+  margin: 16px 0 8px;
+  font-size: 1rem;
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+.limit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 420px;
+  margin-top: 8px;
+}
+
+input.number {
+  flex: none;
+  width: 6.5em;
+}
+
+input.number:disabled {
+  opacity: 0.5;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filters input[type="search"] {
+  min-width: 10em;
+}
+
+.filter-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.filter-date input {
+  flex: none;
+}
+
+#history-more {
+  margin-top: 12px;
+}
+
+.history-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.history-meta {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.outcome {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #2c3442;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.outcome.ok {
+  background: #1f3d2b;
+  color: #6fcf97;
+}
+
+.outcome.warn {
+  background: #4a3a14;
+  color: #ffc53d;
+}
+
+.outcome.error {
+  background: #4d2326;
+  color: #ff8a8e;
+}
+
+#playlist-queue-all {
+  flex: 1 1 auto;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+#playlist-rename-form,
+#queue-save-form {
+  margin: 12px 0;
+}
+
+.queue {
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.queue-card h2 .badge {
+  margin-left: 6px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.messages-list {
+  display: grid;
+  gap: 8px;
+}
+
+.message-group > summary {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.message-group[open] > summary {
+  margin-bottom: 8px;
+}
+
+.message {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.message.disabled textarea {
+  opacity: 0.5;
+}
+
+.message-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-key {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+}
+
+.message textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #2c3442;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.message-form {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.message-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.message-meta code {
+  margin-right: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #2c3442;
+  color: var(--text);
 }

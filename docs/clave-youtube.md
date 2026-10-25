@@ -87,6 +87,7 @@ La clave tiene una cuota gratuita de **10.000 unidades al día** por proyecto. C
 |---|---|
 | Búsqueda por título (`!sr <título>`) | **100 unidades** (unas 100 búsquedas al día) |
 | Importar una playlist | 1 unidad por cada 50 vídeos |
+| Comprobar si el vídeo de un enlace se puede reproducir (`!sr <enlace>`, si *Sustituir los vídeos que no se pueden reproducir* está activado en Ajustes) | 1 unidad |
 | Leer el título de un vídeo suelto | No usa la API: se obtiene sin clave |
 
 La cuota se reinicia cada día a medianoche, hora del Pacífico. Puedes ver cuánto llevas gastado en la [página de cuotas de tu proyecto](https://console.cloud.google.com/apis/api/youtube.googleapis.com/quotas).

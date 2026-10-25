@@ -30,3 +30,8 @@ export function parseEntry(raw) {
   if (!VIDEO_ID_PATTERN.test(raw.videoId)) return null;
   return { source: 'youtube', videoId: raw.videoId, title };
 }
+
+// Texto con el que se nombra una pista: las locales llevan el artista.
+export function trackLabel(track) {
+  return track.artist ? `${track.artist} - ${track.title}` : track.title;
+}

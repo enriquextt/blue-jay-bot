@@ -24,7 +24,11 @@
   "queue": {
     "title": "Queue",
     "empty": "The queue is empty.",
-    "remove": "Remove"
+    "remove": "Remove",
+    "clear": "Clear queue",
+    "clearConfirm": "Sure? Click again",
+    "saveName": "Name of the new playlist",
+    "save": "Save queue as playlist"
   },
   "errors": {
     "invalidMessage": "Invalid message.",
@@ -39,12 +43,20 @@
     "baseListFull": "The base list is full.",
     "localOnly": "The folder can only be changed from the computer running the server.",
     "folderInvalid": "The folder does not exist, is not an absolute path or cannot be read.",
-    "autoplayBlocked": "The browser blocked autoplay. Press play on the player."
+    "autoplayBlocked": "The browser blocked autoplay. Press play on the player.",
+    "playlistInvalid": "The name is not valid or there are too many playlists.",
+    "playlistNotFound": "That playlist no longer exists.",
+    "queueEmpty": "Nothing is playing or queued.",
+    "messageInvalid": "The text is not valid: 400 characters at most and only the variables that message already has."
   },
   "notices": {
     "skippedUnavailable": "Skipped, unavailable: {{title}}",
     "playlistImported": "Playlist imported: {{added}} new out of {{total}} songs.",
-    "banned": "Banned: {{title}}"
+    "banned": "Banned: {{title}}",
+    "savedToPlaylist": "Saved to “{{name}}”: {{added}} new.",
+    "alreadyInPlaylist": "Already in “{{name}}”.",
+    "playlistQueued": "Queued {{added}} of {{total}} songs from “{{name}}”.",
+    "replacedByLocal": "“{{title}}” could not be played; the local version “{{replacement}}” plays instead."
   },
   "chat": {
     "noPermission": "@{{user}}, only moderators can use that command.",
@@ -56,7 +68,9 @@
       "searchDisabled": "@{{user}}, search by title is not enabled; use a YouTube link.",
       "notFound": "@{{user}}, I found no song for \"{{query}}\".",
       "searchFailed": "@{{user}}, the song could not be searched right now. Try a link.",
-      "banned": "@{{user}}, that song is banned."
+      "banned": "@{{user}}, that song is banned.",
+      "unavailable": "@{{user}}, “{{title}}” exists but cannot be played here and I found no version in the local library.",
+      "replaced": "@{{user}}, “{{original}}” cannot be played here; the local version “{{title}}” plays instead."
     },
     "queue": {
       "empty": "Nothing is playing and the queue is empty.",
@@ -92,6 +106,13 @@
       "usage": "@{{user}}, use !local followed by the title, the artist or a word from the song description.",
       "disabled": "@{{user}}, the local library is not available right now.",
       "notFound": "@{{user}}, I found no local track for \"{{query}}\". If the title is short, also add the artist or the album."
+    },
+    "requestsDisabled": "@{{user}}, requests are turned off for now.",
+    "limit": {
+      "user_one": "@{{user}}, you already have {{count}} active request; wait for it to play.",
+      "user_other": "@{{user}}, you already have {{count}} active requests; wait for one to play.",
+      "global_one": "@{{user}}, there is already {{count}} active request in total. Try again later.",
+      "global_other": "@{{user}}, there are already {{count}} active requests in total. Try again later."
     }
   },
   "track": {
@@ -142,5 +163,105 @@
       "error": "The music folder could not be read."
     },
     "addToBaseList": "Add to base list"
+  },
+  "settings": {
+    "title": "Settings",
+    "chat": "Chat requests",
+    "chatLabel": "Accept requests (!sr and !local)",
+    "chatOn": "Chat can request songs.",
+    "chatOff": "Requests are off: !sr and !local add nothing.",
+    "limits": "Active request limits",
+    "limitsHelp": "Counts songs requested from chat that are playing or waiting in the queue.",
+    "userLimit": "Per user",
+    "globalLimit": "In total",
+    "local": "Local library",
+    "localFallback": "Replace videos that cannot be played with their local version",
+    "localFallbackHelp": "If a YouTube link exists but cannot be played here, its title is looked up in the local library and that track plays instead; with no clear match, the request is rejected or skipped. The YouTube key is needed to warn before queueing."
+  },
+  "history": {
+    "title": "History",
+    "requests": "Requests",
+    "plays": "Playback",
+    "filterUser": "Filter by user",
+    "allOutcomes": "All results",
+    "filterOutcome": "Filter by result",
+    "from": "From",
+    "to": "To",
+    "target": "Save to playlist",
+    "noPlaylists": "Create a playlist in the Playlists tab",
+    "empty": "Nothing to show.",
+    "showing": "Showing {{shown}} of {{total}}.",
+    "more": "Show more",
+    "clear": "Clear history",
+    "clearConfirm": "Sure? Click again",
+    "delete": "Delete from history",
+    "addToQueue": "Add to queue",
+    "saveToPlaylist": "Save to the chosen playlist",
+    "by": "requested by {{user}}",
+    "origin": {
+      "request": "request",
+      "base": "base list"
+    },
+    "kind": {
+      "link": "link",
+      "search": "search",
+      "local": "library"
+    },
+    "outcome": {
+      "accepted": "Accepted",
+      "invalid_url": "Invalid URL",
+      "not_found": "Not found",
+      "search_failed": "Search failed",
+      "search_disabled": "Search disabled",
+      "library_disabled": "No library",
+      "banned": "Banned",
+      "disabled": "Requests off",
+      "limit_user": "User limit",
+      "limit_global": "Global limit",
+      "replaced": "Replaced by local",
+      "unavailable": "Not playable"
+    }
+  },
+  "playlists": {
+    "title": "Playlists",
+    "namePlaceholder": "Name of the new playlist",
+    "create": "Create playlist",
+    "empty": "There are no playlists yet.",
+    "open": "Open",
+    "back": "Back to playlists",
+    "rename": "Rename",
+    "delete": "Delete playlist",
+    "deleteConfirm": "Sure? Click again",
+    "queueAll": "Add the whole playlist to the queue",
+    "addToQueue": "Add to queue",
+    "removeItem": "Remove from playlist",
+    "itemsEmpty": "The playlist is empty. Save songs from the history.",
+    "count_one": "{{count}} song",
+    "count_other": "{{count}} songs"
+  },
+  "messages": {
+    "title": "Messages",
+    "intro": "Rewrite what the bot says in chat. Variables go between double braces and are replaced when it replies. A disabled message keeps the bot silent. An empty text, or one equal to the original, goes back to the original.",
+    "language": "Language you are editing",
+    "botLanguage": "The bot replies in: {{language}}.",
+    "search": "Search a message",
+    "enabled": "Enabled",
+    "custom": "Customized",
+    "reset": "Restore original",
+    "params": "Variables:",
+    "preview": "Preview:",
+    "empty": "No messages match.",
+    "form": {
+      "zero": "zero",
+      "one": "singular",
+      "two": "two",
+      "few": "few",
+      "many": "many",
+      "other": "plural"
+    },
+    "group": {
+      "general": "General",
+      "limit": "Request limits"
+    }
   }
 }

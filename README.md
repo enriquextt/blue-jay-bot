@@ -15,7 +15,13 @@ Funciona en tu propio equipo: los datos, las claves de API y la música no salen
 - **Lista base** que suena cuando la cola se queda vacía: botones START (en orden) y SHUFFLE (aleatorio), playlists de YouTube, favoritos que van primero y lista negra con un clic.
 - **Biblioteca local**: eliges una carpeta de música, se escanea y se mantiene al día. Se busca por título, artista, álbum, comentario o descripción, y se reproduce desde el propio panel.
 - **Etiquetas de audio** (ID3, Vorbis, MP4…): título, artista, álbum, duración y notas. Un comentario o una descripción pueden servir de título alternativo.
-- **Panel con pestañas** (Cola, Lista base, Biblioteca local, Lista negra), iconos propios y cambio de idioma al vuelo.
+- **Vídeos que no se pueden reproducir**: si alguien pide un enlace de YouTube que existe pero no se puede incrustar o reproducir, el bot busca su título en tu biblioteca local y pone esa pista (o rechaza la petición si no hay una coincidencia clara). Se puede desactivar en Ajustes.
+- **Historial** de las peticiones del chat (con su resultado: aceptada, URL no válida, vetada, límite…) y de las canciones reproducidas, con filtros por usuario y fecha y opción de borrar o limpiar.
+- **Listas de reproducción propias**: se crean, se llenan desde el historial o con la cola actual y se añaden a la cola, canción a canción o enteras.
+- **Límites y control del chat**: máximo de peticiones activas por usuario y en total, y un interruptor para dejar de aceptar `!sr` y `!local`.
+- **Persistencia**: la cola, la canción actual, el volumen y el estado START/SHUFFLE sobreviven a un reinicio (SQLite).
+- **Mensajes del bot editables**: reescribe lo que responde el bot en cada idioma, con vista previa, y activa o desactiva cada mensaje sin perder su texto.
+- **Panel en dos columnas**: a la izquierda lo que suena, añadir canción y la cola; a la derecha las pestañas (Lista base, Biblioteca local, Historial, Listas, Lista negra, Mensajes, Ajustes). Iconos propios y cambio de idioma al vuelo.
 
 ## Requisitos
 
@@ -61,6 +67,7 @@ Los datos locales viven en `data/`, que **git ignora**. Nunca subas esa carpeta:
 | `library.json` | El panel | Carpeta de música elegida |
 | `baselist.json` | El panel | Lista base y favoritos |
 | `blacklist.json` | El panel | Canciones vetadas |
+| `blue-jay.db` | El servidor | Base de datos SQLite: ajustes, cola guardada, historiales y listas de reproducción (junto a ella pueden aparecer `blue-jay.db-wal` y `blue-jay.db-shm`) |
 
 **Chat de Twitch.** Crea `data/twitch.json` con las credenciales de una aplicación de Twitch. Si no existe, el chat queda desactivado y el resto funciona igual. La guía [docs/credenciales-twitch.md](docs/credenciales-twitch.md) explica cómo conseguir cada valor.
 
@@ -88,12 +95,18 @@ Cada búsqueda por título cuesta 100 unidades de la cuota diaria (10.000 por de
 
 ### Panel de control
 
-1. **Sonando ahora**: reproductor, volumen, siguiente, favorito (★) y vetar (⊘) de la canción actual.
+El panel tiene dos columnas. La izquierda (un tercio) es fija: **Sonando ahora**, **Añadir canción** y **Cola**. La derecha (dos tercios) tiene las pestañas. En pantallas estrechas se apilan.
+
+1. **Sonando ahora**: arriba, en una sola fila, favorito (★), vetar (⊘) y siguiente; debajo, el reproductor y el volumen.
 2. **Añadir canción**: pega una URL o un ID de YouTube.
-3. **Cola**: arrastra para reordenar. Cada canción se puede marcar como favorita, vetar o quitar.
+3. **Cola** (en la columna izquierda): arrastra para reordenar. Cada canción se puede marcar como favorita, vetar o quitar. *Limpiar cola* quita las pendientes sin cortar la que suena (pide una segunda pulsación) y *Guardar cola como lista* crea una lista de reproducción con lo que suena y lo que espera.
 4. **Lista base**: pega un vídeo o una playlist de YouTube. **START** reproduce en orden (favoritos primero) y **SHUFFLE** en aleatorio, sin repetir hasta recorrerla toda. **Parar** la desactiva y **Vaciar** la borra (pide una segunda pulsación). Admite hasta 2.000 pistas.
 5. **Biblioteca local**: escribe la ruta absoluta de tu carpeta de música (por ejemplo `C:\Music`) y pulsa *Guardar carpeta*. La casilla *Incluir la biblioteca en la lista base* añade toda la carpeta al fallback sin copiarla. Cada resultado se puede añadir a la cola, a la lista base, marcar como favorito o vetar.
-6. **Lista negra**: las canciones vetadas no se pueden pedir y salen de la cola y de la lista base. Desde aquí se les quita el veto.
+6. **Historial**: *Peticiones* muestra cada `!sr` y `!local` del chat con su resultado, también los rechazados (por ejemplo, **URL no válida**); *Reproducción* muestra lo que ha ido sonando. Se filtra por usuario, resultado y fechas; cada fila se puede borrar, añadir a la cola o guardar en la lista elegida arriba, y *Limpiar historial* vacía el que estás viendo (pide una segunda pulsación).
+7. **Listas**: crea listas de reproducción, ábrelas para ver sus canciones, añade una a la cola o la lista entera, renómbralas o elimínalas.
+8. **Lista negra**: las canciones vetadas no se pueden pedir y salen de la cola y de la lista base. Desde aquí se les quita el veto.
+9. **Mensajes**: cada respuesta del bot se puede reescribir en español o en inglés (el bot usa el idioma de `LANGUAGE`). Las variables, como `{{user}}` o `{{title}}`, se escriben entre dos llaves y solo se admiten las que ya tiene el mensaje; debajo del cuadro se ve una vista previa con valores de ejemplo. La casilla *Activado* hace que el bot se calle en ese mensaje sin borrar su texto, y *Restaurar original* lo devuelve a como venía.
+10. **Ajustes**: la sustitución de vídeos que no se pueden reproducir por su versión local (activada por defecto; con la clave de YouTube avisa antes de encolar, y sin ella actúa cuando el reproductor falla), los límites de peticiones activas (por defecto 25 por usuario y 100 en total) y el interruptor *Aceptar peticiones*, que también está en la barra superior. Con las peticiones desactivadas, `!sr` y `!local` responden con un aviso y no añaden nada; los demás comandos siguen funcionando.
 
 La petición de un viewer no interrumpe la canción de la lista base que está sonando: entra cuando esta termina.
 
@@ -126,12 +139,12 @@ La petición de un viewer no interrumpe la canción de la lista base que está s
 npm test
 ```
 
-Usan `node:test` y están en `test/`. Cubren la cola, la lista base, el chat, el adaptador de Twitch, YouTube, la biblioteca local y el canal WebSocket.
+Usan `node:test` y están en `test/`. Cubren la cola, la lista base, el chat, el adaptador de Twitch, YouTube, la biblioteca local, el canal WebSocket, la base de datos (ajustes, historiales, listas y estado guardado) y los reinicios.
 
 ## Estructura del proyecto
 
 ```
-server/     Backend: HTTP, WebSocket, cola, comandos, chat y biblioteca local
+server/     Backend: HTTP, WebSocket, cola, comandos, chat, biblioteca local y base de datos SQLite
 public/     Panel de control (HTML, CSS, JS, iconos y archivos de idioma)
 docs/       Checklist, propuesta de arquitectura y contrato de la API
 test/       Pruebas
@@ -148,16 +161,16 @@ data/       Datos locales y credenciales (ignorado por git)
 | 3 | Lista base, favoritos y lista negra | Hecha |
 | 4 | Biblioteca local | Hecha |
 | 4.5 | Etiquetas, `!local` y búsqueda por comentario y descripción | Hecha |
-| 5 | Límites por usuario y global, historial y persistencia de la cola | Pendiente |
+| 5 | Límites por usuario y global, historial, listas de reproducción y persistencia de la cola | Hecha |
 | 6 | Widget de OBS | Pendiente |
 | 7 | Diagnóstico y exportar/importar ajustes | Pendiente |
 | 8 | Opcionales: Spotify, editor del widget, chat de Kick y YouTube | Pendiente |
 
 **Limitaciones actuales**
 
-- La cola, la canción actual y el volumen **no se guardan** al reiniciar el servidor (sí la lista base, los favoritos, la lista negra y la carpeta de música).
+- Al reiniciar, la canción que sonaba vuelve a empezar desde el principio cuando abres el panel.
 - Solo hay adaptador de chat para Twitch.
-- No hay límites de peticiones por usuario ni historial.
+- Los mensajes del bot en el chat no se pueden editar desde el panel.
 - Todavía no hay widget para OBS. Para mostrar o capturar el audio hay que usar la pestaña del panel.
 - El título y el artista no se pueden editar desde el panel; salen de las etiquetas del archivo.
 

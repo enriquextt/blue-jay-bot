@@ -7,16 +7,24 @@ import { BaseList } from './baselist/base-list.js';
 import { Blacklist } from './baselist/blacklist.js';
 import { createTwitchAdapter, loadCredentials } from './chat/twitch.js';
 import { createCommands } from './commands/index.js';
-import { createTranslator } from './i18n/index.js';
+import { openDatabase } from './db/database.js';
+import { createKv } from './db/kv.js';
+import { History } from './history/history.js';
+import { createTranslator, LOCALES, loadLocales } from './i18n/index.js';
+import { Messages } from './i18n/messages.js';
 import { Library } from './library/library.js';
+import { Playlists } from './playlists/playlists.js';
 import { PlaybackQueue } from './queue/playback-queue.js';
+import { Settings } from './settings/settings.js';
+import { PlayerState } from './state/player-state.js';
 import { trackKey } from './tracks.js';
 import { createChannel } from './ws/channel.js';
-import { fetchPlaylistVideos, fetchVideoTitle, searchVideoId } from './youtube/youtube.js';
+import { fetchPlaylistVideos, fetchVideoInfo, fetchVideoTitle, searchVideoId } from './youtube/youtube.js';
 
 const ROOT_DIR = fileURLToPath(new URL('..', import.meta.url));
 const PUBLIC_DIR = join(ROOT_DIR, 'public');
 const NODE_MODULES_DIR = join(ROOT_DIR, 'node_modules');
+const SAVE_DELAY_MS = 300;
 
 export async function createServer({
   host,
@@ -28,17 +36,62 @@ export async function createServer({
   baseListPath = null,
   blacklistPath = null,
   libraryConfigPath = null,
+  databasePath = null,
   watchLibrary = true,
   readTags,
   log = () => {},
   fetchTitle = (videoId) => fetchVideoTitle(videoId),
+  fetchInfo = null,
 }) {
   const app = Fastify({ logger: false });
   const blacklist = new Blacklist({ path: blacklistPath, log });
   const library = new Library({ configPath: libraryConfigPath, log, watch: watchLibrary, readTags });
   const baseList = new BaseList({ path: baseListPath, log, library, isBanned: (key) => blacklist.hasKey(key) });
   await Promise.all([baseList.load(), blacklist.load(), library.load()]);
-  const queue = new PlaybackQueue({ fallback: () => baseList.next() });
+
+  // Sin `databasePath` la base de datos vive en memoria (pruebas).
+  const db = openDatabase(databasePath);
+  const kv = createKv(db);
+  const settings = new Settings({ kv });
+  const history = new History({ db });
+  const playlists = new Playlists({ db });
+  const playerState = new PlayerState({ kv });
+  const locales = await loadLocales();
+  const messages = new Messages({ kv, locales });
+
+  const queue = new PlaybackQueue({
+    fallback: () => baseList.next(),
+    onPlay: (track) => {
+      try {
+        history.logPlay(track);
+      } catch (error) {
+        log('history.writeFailed', error);
+      }
+    },
+  });
+
+  // Recupera lo que había al cerrar: lista base, cola, canción actual y volumen.
+  const saved = playerState.load();
+  if (saved) {
+    baseList.setIncludeLibrary(saved.fallback.includeLibrary);
+    if (saved.fallback.active) baseList.start(saved.fallback.mode);
+    queue.restore(saved);
+    if (!queue.snapshot().current) queue.advance();
+  }
+
+  let saveTimer = null;
+  const saveState = () => {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    try {
+      playerState.save({ ...queue.snapshot(), fallback: baseList.status() });
+    } catch (error) {
+      log('state.saveFailed', error);
+    }
+  };
+  const scheduleSave = () => {
+    saveTimer ??= setTimeout(saveState, SAVE_DELAY_MS);
+  };
 
   const withFavorite = (track) => track && { ...track, favorite: baseList.isFavorite(trackKey(track)) };
   const getState = () => {
@@ -73,6 +126,11 @@ export async function createServer({
   const youtube = youtubeCredentialsPath ? await loadCredentials(youtubeCredentialsPath) : null;
   if (youtubeCredentialsPath && !youtube?.apiKey) log('youtube.searchDisabled');
 
+  // Datos de un vídeo (título y si se puede incrustar): solo con la clave de YouTube, o inyectados en las pruebas.
+  const getVideoInfo = fetchInfo ?? (youtube?.apiKey ? (videoId) => fetchVideoInfo(videoId, youtube.apiKey) : null);
+  const t = await createTranslator(language, { locales, messages });
+  let twitch = null;
+
   const wss = new WebSocketServer({ server: app.server, path: '/ws' });
   const channel = createChannel({
     wss,
@@ -80,8 +138,17 @@ export async function createServer({
     baseList,
     blacklist,
     library,
+    history,
+    playlists,
+    settings,
+    messages,
+    language: LOCALES.includes(language) ? language : 'es',
     getState,
     fetchTitle,
+    getVideoInfo,
+    t,
+    announce: (text) => twitch?.say(text),
+    onStateChange: scheduleSave,
     listPlaylist: youtube?.apiKey ? (playlistId) => fetchPlaylistVideos(playlistId, youtube.apiKey) : null,
   });
 
@@ -89,23 +156,30 @@ export async function createServer({
     queue,
     blacklist,
     library,
+    settings,
+    history,
     fetchTitle,
     searchVideo: youtube?.apiKey ? (query) => searchVideoId(query, youtube.apiKey) : null,
-    t: await createTranslator(language),
+    getVideoInfo,
+    t,
     onChange: channel.broadcastState,
     voteSkipThreshold,
   });
-  const twitch = await startTwitch({ credentialsPath: twitchCredentialsPath, commands, log });
+  twitch = await startTwitch({ credentialsPath: twitchCredentialsPath, commands, log });
 
   return {
     app,
     library,
+    history,
+    commands,
     async close() {
       twitch?.stop();
       library.close();
       wss.close();
       await app.close();
       await Promise.all([baseList.flush(), blacklist.flush(), library.flush()]);
+      saveState();
+      db.close();
     },
   };
 }

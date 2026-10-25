@@ -1,7 +1,9 @@
 import { WebSocket } from 'ws';
 import { MODES } from '../baselist/base-list.js';
-import { toEntry, trackKey } from '../tracks.js';
+import { findLocalMatch } from '../library/title-match.js';
+import { toEntry, trackKey, trackLabel } from '../tracks.js';
 import { parsePlaylistId, parseVideoId } from '../youtube/youtube.js';
+import { createCollectionCommands } from './collections.js';
 
 const MAX_URL_LENGTH = 500;
 const MAX_ID_LENGTH = 64;
@@ -10,7 +12,25 @@ const MAX_PATH_LENGTH = 1024;
 const MAX_QUERY_LENGTH = 100;
 const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
-export function createChannel({ wss, queue, baseList, blacklist, library, getState, fetchTitle, listPlaylist = null }) {
+export function createChannel({
+  wss,
+  queue,
+  baseList,
+  blacklist,
+  library,
+  history,
+  playlists,
+  settings,
+  messages,
+  language,
+  getState,
+  fetchTitle,
+  getVideoInfo = null,
+  t,
+  announce = () => {},
+  listPlaylist = null,
+  onStateChange = () => {},
+}) {
   const clients = new Set();
 
   function send(socket, message) {
@@ -26,7 +46,22 @@ export function createChannel({ wss, queue, baseList, blacklist, library, getSta
 
   function broadcastState() {
     broadcast({ type: 'state', data: getState() });
+    onStateChange();
   }
+
+  function notice(key, params) {
+    broadcast({ type: 'notice', key, params });
+  }
+
+  const playlistsMessage = () => ({ type: 'playlists', data: playlists.list() });
+  const settingsMessage = () => ({ type: 'settings', data: settings.get() });
+  const messagesMessage = () => ({ type: 'messages', data: { language, items: messages.list() } });
+
+  // El historial puede ser grande: solo se avisa del cambio y cada panel vuelve a pedir lo que está mirando.
+  history.on('change', () => broadcast({ type: 'history.changed' }));
+  playlists.on('change', () => broadcast(playlistsMessage()));
+  settings.on('change', () => broadcast(settingsMessage()));
+  messages.on('change', () => broadcast(messagesMessage()));
 
   function baseListMessage() {
     return { type: 'baselist', data: { items: baseList.list(), banned: blacklist.list() } };
@@ -90,6 +125,37 @@ export function createChannel({ wss, queue, baseList, blacklist, library, getSta
     return broadcastBaseList();
   }
 
+  // Pista de la biblioteca que sustituye a una petición de YouTube que no se puede reproducir, o null.
+  // Con la clave de YouTube se recupera el título cuando oEmbed no lo dio (suele pasar justo en esos vídeos).
+  async function localReplacement(current) {
+    if (current.origin !== 'request' || current.source !== 'youtube' || !settings.get().localFallback) return null;
+
+    let title = current.title;
+    if (title === current.videoId && getVideoInfo) {
+      try {
+        title = (await getVideoInfo(current.videoId))?.title ?? title;
+      } catch {
+        // Sin título no hay nada que buscar.
+      }
+    }
+    if (title === current.videoId) return null;
+
+    return findLocalMatch({ library, title, exclude: (track) => blacklist.has(track) });
+  }
+
+  // Pone la pista local donde sonaba la petición, y avisa en el panel y en el chat a quien la pidió.
+  function replaceWithLocal(current, replacement) {
+    if (!queue.replaceCurrent(current.id, replacement)) return false;
+
+    const title = trackLabel(replacement);
+    notice('notices.replacedByLocal', { title: current.title, replacement: title });
+
+    const user = current.requestedBy?.slice(current.requestedBy.indexOf(':') + 1);
+    const message = user && t('chat.sr.replaced', { user, original: current.title, title });
+    if (message) announce(message);
+    return true;
+  }
+
   function sendError(socket, key) {
     send(socket, { type: 'error', key });
   }
@@ -98,7 +164,26 @@ export function createChannel({ wss, queue, baseList, blacklist, library, getSta
     return typeof value === 'string' && value.length > 0 && value.length <= MAX_ID_LENGTH;
   }
 
+  const collectionCommands = createCollectionCommands({
+    queue,
+    library,
+    blacklist,
+    history,
+    playlists,
+    settings,
+    messages,
+    findTrack,
+    send,
+    sendError,
+    notice,
+    broadcastState,
+  });
+
   async function handleCommand(socket, command, { isLocal }) {
+    if (typeof command?.type === 'string' && Object.hasOwn(collectionCommands, command.type)) {
+      return collectionCommands[command.type](socket, command);
+    }
+
     switch (command?.type) {
       case 'queue.add': {
         const url = command.url;
@@ -148,6 +233,10 @@ export function createChannel({ wss, queue, baseList, blacklist, library, getSta
         if (!isId(command.id)) return sendError(socket, 'errors.invalidMessage');
 
         const { current } = queue.snapshot();
+        if (current?.id === command.id) {
+          const replacement = await localReplacement(current);
+          if (replacement && replaceWithLocal(current, replacement)) return broadcastState();
+        }
         if (!queue.finish(command.id)) return;
 
         // Un vídeo de la lista base que no se puede reproducir se retira para no volver a intentarlo.
@@ -291,6 +380,10 @@ export function createChannel({ wss, queue, baseList, blacklist, library, getSta
     send(socket, { type: 'state', data: getState() });
     send(socket, baseListMessage());
     send(socket, libraryMessage());
+    send(socket, playlistsMessage());
+    send(socket, settingsMessage());
+    send(socket, messagesMessage());
+    send(socket, { type: 'history.changed' });
 
     socket.on('message', (raw) => {
       let command;

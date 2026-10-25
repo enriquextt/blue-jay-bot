@@ -13,6 +13,10 @@
   <header class="topbar">
     <h1 data-i18n="app.title">Blue Jay Bot</h1>
     <span id="connection" class="status"></span>
+    <label id="chat-toggle" class="check chat-toggle">
+      <input type="checkbox" data-setting="chatEnabled" checked>
+      <span data-i18n="settings.chatLabel">Aceptar peticiones (!sr y !local)</span>
+    </label>
     <label class="language">
       <span data-i18n="app.language">Idioma</span>
       <select id="language">
@@ -22,56 +26,76 @@
     </label>
   </header>
 
-  <main>
-    <section class="card now-playing">
-      <h2 data-i18n="now.title">Sonando ahora</h2>
-      <div class="player-frame">
-        <div id="player"></div>
-      </div>
-      <audio id="local-audio" class="local-audio" controls hidden></audio>
-      <div class="now-row">
+  <main class="layout">
+    <div class="col-side">
+      <section class="card now-playing">
+        <h2 data-i18n="now.title">Sonando ahora</h2>
+        <div class="now-actions">
+          <button id="now-favorite" class="icon" type="button"></button>
+          <button id="now-ban" class="icon danger" type="button"></button>
+          <button id="next" type="button"><span data-i18n="now.next">Siguiente</span></button>
+        </div>
+        <div class="player-frame">
+          <div id="player"></div>
+        </div>
+        <audio id="local-audio" class="local-audio" controls hidden></audio>
         <p id="now-title" class="now-title"></p>
-        <button id="now-favorite" class="icon" type="button"></button>
-        <button id="now-ban" class="icon danger" type="button"></button>
-        <button id="next" type="button"><span data-i18n="now.next">Siguiente</span></button>
-      </div>
-      <label class="volume">
-        <span data-i18n="volume.label">Volumen</span>
-        <input id="volume" type="range" min="0" max="100" step="1" value="50">
-        <output id="volume-value" for="volume">50%</output>
-      </label>
-    </section>
+        <label class="volume">
+          <span data-i18n="volume.label">Volumen</span>
+          <input id="volume" type="range" min="0" max="100" step="1" value="50">
+          <output id="volume-value" for="volume">50%</output>
+        </label>
+      </section>
 
-    <section class="card">
-      <h2 data-i18n="add.title">Añadir canción</h2>
-      <form id="add-form" class="add-form">
-        <input id="add-input" type="text" required autocomplete="off" data-i18n-placeholder="add.placeholder">
-        <button type="submit" data-i18n="add.submit">Añadir</button>
-      </form>
-    </section>
+      <section class="card">
+        <h2 data-i18n="add.title">Añadir canción</h2>
+        <form id="add-form" class="add-form">
+          <input id="add-input" type="text" required autocomplete="off" data-i18n-placeholder="add.placeholder">
+          <button type="submit" data-i18n="add.submit">Añadir</button>
+        </form>
+      </section>
 
+      <section class="card queue-card">
+        <h2><span data-i18n="queue.title">Cola</span> <span id="count-queue" class="badge"></span></h2>
+        <ol id="queue" class="queue"></ol>
+        <p id="queue-empty" class="empty" data-i18n="queue.empty">La cola está vacía.</p>
+        <div class="controls">
+          <button id="queue-clear" class="secondary" type="button"><span data-i18n="queue.clear">Limpiar cola</span></button>
+        </div>
+        <form id="queue-save-form" class="add-form">
+          <input id="queue-save-name" type="text" required autocomplete="off" data-i18n-placeholder="queue.saveName">
+          <button id="queue-save" type="submit"><span data-i18n="queue.save">Guardar cola como lista</span></button>
+        </form>
+      </section>
+    </div>
+
+    <div class="col-main">
     <section class="card tabs">
       <div class="tablist" role="tablist">
-        <button id="tab-queue" class="tab" type="button" role="tab" data-tab="queue" aria-selected="true" aria-controls="panel-queue">
-          <span data-i18n="queue.title">Cola</span> <span id="count-queue" class="badge"></span>
-        </button>
-        <button id="tab-baselist" class="tab" type="button" role="tab" data-tab="baselist" aria-selected="false" aria-controls="panel-baselist" tabindex="-1">
+        <button id="tab-baselist" class="tab" type="button" role="tab" data-tab="baselist" aria-selected="true" aria-controls="panel-baselist">
           <span data-i18n="baselist.title">Lista base</span> <span id="count-baselist" class="badge"></span>
         </button>
         <button id="tab-library" class="tab" type="button" role="tab" data-tab="library" aria-selected="false" aria-controls="panel-library" tabindex="-1">
           <span data-i18n="library.title">Biblioteca local</span> <span id="count-library" class="badge"></span>
         </button>
+        <button id="tab-history" class="tab" type="button" role="tab" data-tab="history" aria-selected="false" aria-controls="panel-history" tabindex="-1">
+          <span data-i18n="history.title">Historial</span>
+        </button>
+        <button id="tab-playlists" class="tab" type="button" role="tab" data-tab="playlists" aria-selected="false" aria-controls="panel-playlists" tabindex="-1">
+          <span data-i18n="playlists.title">Listas</span> <span id="count-playlists" class="badge"></span>
+        </button>
         <button id="tab-banned" class="tab" type="button" role="tab" data-tab="banned" aria-selected="false" aria-controls="panel-banned" tabindex="-1">
           <span data-i18n="banned.title">Lista negra</span> <span id="count-banned" class="badge"></span>
         </button>
+        <button id="tab-messages" class="tab" type="button" role="tab" data-tab="messages" aria-selected="false" aria-controls="panel-messages" tabindex="-1">
+          <span data-i18n="messages.title">Mensajes</span>
+        </button>
+        <button id="tab-settings" class="tab" type="button" role="tab" data-tab="settings" aria-selected="false" aria-controls="panel-settings" tabindex="-1">
+          <span data-i18n="settings.title">Ajustes</span>
+        </button>
       </div>
 
-      <div id="panel-queue" class="tabpanel" role="tabpanel" aria-labelledby="tab-queue">
-        <ol id="queue" class="queue"></ol>
-        <p id="queue-empty" class="empty" data-i18n="queue.empty">La cola está vacía.</p>
-      </div>
-
-      <div id="panel-baselist" class="tabpanel" role="tabpanel" aria-labelledby="tab-baselist" hidden>
+      <div id="panel-baselist" class="tabpanel" role="tabpanel" aria-labelledby="tab-baselist">
         <form id="baselist-form" class="add-form">
           <input id="baselist-input" type="text" required autocomplete="off" data-i18n-placeholder="baselist.placeholder">
           <button type="submit" data-i18n="baselist.add">Añadir</button>
@@ -107,11 +131,110 @@
         <p id="library-showing" class="empty"></p>
       </div>
 
+      <div id="panel-history" class="tabpanel" role="tabpanel" aria-labelledby="tab-history" hidden>
+        <div class="controls">
+          <button type="button" data-history-kind="requests" aria-pressed="true"><span data-i18n="history.requests">Peticiones</span></button>
+          <button type="button" data-history-kind="plays" aria-pressed="false"><span data-i18n="history.plays">Reproducción</span></button>
+        </div>
+        <div class="filters">
+          <input id="history-user" type="search" autocomplete="off" data-i18n-placeholder="history.filterUser">
+          <select id="history-outcome" data-i18n-aria-label="history.filterOutcome"></select>
+          <label class="filter-date"><span data-i18n="history.from">Desde</span> <input id="history-from" type="date"></label>
+          <label class="filter-date"><span data-i18n="history.to">Hasta</span> <input id="history-to" type="date"></label>
+        </div>
+        <div class="controls">
+          <label class="filter-date"><span data-i18n="history.target">Guardar en la lista</span> <select id="history-target"></select></label>
+          <button id="history-clear" class="secondary" type="button"><span data-i18n="history.clear">Limpiar historial</span></button>
+        </div>
+        <ul id="history-list" class="track-list"></ul>
+        <p id="history-empty" class="empty" data-i18n="history.empty">No hay nada que mostrar.</p>
+        <p id="history-showing" class="empty"></p>
+        <button id="history-more" class="secondary" type="button" hidden><span data-i18n="history.more">Ver más</span></button>
+      </div>
+
+      <div id="panel-playlists" class="tabpanel" role="tabpanel" aria-labelledby="tab-playlists" hidden>
+        <div id="playlist-overview">
+          <form id="playlist-form" class="add-form">
+            <input id="playlist-name" type="text" required autocomplete="off" data-i18n-placeholder="playlists.namePlaceholder">
+            <button type="submit" data-i18n="playlists.create">Crear lista</button>
+          </form>
+          <ul id="playlist-list" class="track-list"></ul>
+          <p id="playlist-empty" class="empty" data-i18n="playlists.empty">Todavía no hay listas.</p>
+        </div>
+        <div id="playlist-detail" hidden>
+          <div class="controls">
+            <button id="playlist-back" class="secondary" type="button" data-i18n="playlists.back">Volver a las listas</button>
+          </div>
+          <h3 id="playlist-title" class="section-title"></h3>
+          <p id="playlist-summary" class="empty"></p>
+          <div class="controls">
+            <button id="playlist-queue-all" type="button"><span data-i18n="playlists.queueAll">Añadir toda la lista a la cola</span></button>
+            <button id="playlist-delete" class="secondary" type="button"><span data-i18n="playlists.delete">Eliminar lista</span></button>
+          </div>
+          <form id="playlist-rename-form" class="add-form">
+            <input id="playlist-rename-input" type="text" required autocomplete="off" data-i18n-placeholder="playlists.namePlaceholder">
+            <button type="submit" class="secondary" data-i18n="playlists.rename">Renombrar</button>
+          </form>
+          <ul id="playlist-items" class="track-list"></ul>
+          <p id="playlist-items-empty" class="empty" data-i18n="playlists.itemsEmpty">La lista está vacía.</p>
+        </div>
+      </div>
+
       <div id="panel-banned" class="tabpanel" role="tabpanel" aria-labelledby="tab-banned" hidden>
         <ul id="banned" class="track-list"></ul>
         <p id="banned-empty" class="empty" data-i18n="banned.empty">No hay canciones vetadas.</p>
       </div>
+
+      <div id="panel-messages" class="tabpanel" role="tabpanel" aria-labelledby="tab-messages" hidden>
+        <p class="empty" data-i18n="messages.intro"></p>
+        <div class="filters">
+          <label class="filter-date"><span data-i18n="messages.language">Idioma que editas</span>
+            <select id="messages-locale">
+              <option value="es">Español</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <input id="messages-search" type="search" autocomplete="off" data-i18n-placeholder="messages.search">
+        </div>
+        <p id="messages-bot-language" class="empty"></p>
+        <div id="messages-list" class="messages-list"></div>
+        <p id="messages-empty" class="empty" data-i18n="messages.empty" hidden></p>
+      </div>
+
+      <div id="panel-settings" class="tabpanel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <h3 class="section-title" data-i18n="settings.chat">Peticiones del chat</h3>
+        <label class="check">
+          <input type="checkbox" data-setting="chatEnabled" checked>
+          <span data-i18n="settings.chatLabel">Aceptar peticiones (!sr y !local)</span>
+        </label>
+        <p id="chat-status" class="empty"></p>
+
+        <h3 class="section-title" data-i18n="settings.local">Biblioteca local</h3>
+        <label class="check">
+          <input type="checkbox" data-setting="localFallback" checked>
+          <span data-i18n="settings.localFallback">Sustituir los vídeos que no se pueden reproducir por su versión local</span>
+        </label>
+        <p class="empty" data-i18n="settings.localFallbackHelp">Si un enlace de YouTube existe pero no se puede reproducir aquí, se busca su título en la biblioteca local y suena esa pista; si no hay una coincidencia clara, la petición se rechaza o se salta. Para avisar antes de encolar hace falta la clave de YouTube.</p>
+
+        <h3 class="section-title" data-i18n="settings.limits">Límites de peticiones activas</h3>
+        <p class="empty" data-i18n="settings.limitsHelp">Cuentan las canciones pedidas por el chat que están sonando o esperando en la cola.</p>
+        <div class="limit-row">
+          <label class="check">
+            <input id="limit-user-enabled" type="checkbox">
+            <span data-i18n="settings.userLimit">Por usuario</span>
+          </label>
+          <input id="limit-user-max" class="number" type="number" min="1" max="1000" step="1" data-i18n-aria-label="settings.userLimit">
+        </div>
+        <div class="limit-row">
+          <label class="check">
+            <input id="limit-global-enabled" type="checkbox">
+            <span data-i18n="settings.globalLimit">En total</span>
+          </label>
+          <input id="limit-global-max" class="number" type="number" min="1" max="1000" step="1" data-i18n-aria-label="settings.globalLimit">
+        </div>
+      </div>
     </section>
+    </div>
   </main>
 
   <div id="notices" class="notices" role="status" aria-live="polite"></div>

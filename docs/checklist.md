@@ -17,8 +17,8 @@ Leyenda de la columna de decisión:
 - [x] Botones START / SHUFFLE para la lista base — **Mantener** (más un botón para parar)
 - [x] Añadir playlists de YouTube como lista base — **Mantener** (requiere la clave de YouTube Data API; hasta 1.000 vídeos por importación)
 - [x] Auto-skip de vídeos no disponibles, bloqueados o eliminados — **Mantener**
-- [ ] Persistencia de la cola entre recargas — **Mantener** (changelog v1.2.3). Planificada en la fase 5, junto con el volumen y el modo START/SHUFFLE; hoy solo se guardan la lista base y la lista negra
-- [ ] Limpiar cola y guardar cola — **Mantener**
+- [x] Persistencia de la cola entre recargas — **Mantener** (changelog v1.2.3). Fase 5: la cola, la canción actual, el volumen y el estado START/SHUFFLE se guardan en SQLite (`data/blue-jay.db`) y se recuperan al arrancar; la canción actual vuelve a sonar desde el principio
+- [x] Limpiar cola y guardar cola — **Mantener**. Fase 5: «Limpiar cola» vacía las pendientes sin cortar la que suena; «Guardar cola como lista» guarda la canción actual y la cola en una lista de reproducción nueva
 - [x] Control de volumen del reproductor — **Mantener** (slider en el panel y `!volume` en el chat)
 - [x] Favoritos (estrella) en la lista base, la cola y la canción actual; aparecen arriba y entran en START/SHUFFLE — **Mantener** (changelog v1.2.3). Marcar una canción de la cola o la actual la añade a la lista base
 
@@ -34,6 +34,7 @@ Leyenda de la columna de decisión:
 ## 3. Comandos de chat
 
 - [x] `!sr [enlace/título]` para pedir canciones — **Adaptar** (enlace, ID o búsqueda por título con la clave de YouTube Data API). Fase 4.5: si el texto no es un enlace ni un ID, se busca primero en la biblioteca local y solo si no hay coincidencia se consulta YouTube. La búsqueda del chat es estricta: si la palabra solo coincide con una etiqueta de menos de 10 caracteres, hace falta que coincida también el artista o el álbum
+- [x] Sustituir por la biblioteca local un vídeo de YouTube que existe pero no se puede reproducir — **Mantener** (requerimiento nuevo). Con la clave de YouTube, `!sr <enlace>` mira antes de encolar si el vídeo se puede incrustar; si no, busca su título en la biblioteca (búsqueda estricta, con el ruido del título quitado) y encola esa pista o, si no hay una coincidencia clara, rechaza la petición. Además, una petición que falla al reproducirse se sustituye al vuelo si hay coincidencia. Se activa y desactiva en Ajustes (activado por defecto)
 - [x] `!local [texto]` para pedir una pista solo de la biblioteca local — **Mantener** (requerimiento nuevo, fase 4.5). Busca por título, artista, álbum, comentario o descripción
 - [x] `!when` para ver cuándo sonará la próxima canción del viewer — **Mantener**
 - [x] `!queue` para ver la canción actual y las 10 siguientes — **Mantener**
@@ -47,20 +48,24 @@ Leyenda de la columna de decisión:
 
 ## 4. Límites y moderación
 
-- [ ] Límite de peticiones activas por usuario (por defecto 25) — **Mantener**
-- [ ] Límite global de peticiones activas (por defecto 100) — **Mantener**
-- [ ] Interruptores para activar o desactivar cada límite, con estado guardado — **Mantener**
-- [ ] Avisos en el chat cuando se alcanza un límite — **Mantener**
+- [x] Límite de peticiones activas por usuario (por defecto 25) — **Mantener**. Cuenta la canción que suena y las pendientes que pidió ese usuario; las de la lista base no cuentan
+- [x] Límite global de peticiones activas (por defecto 100) — **Mantener**
+- [x] Interruptores para activar o desactivar cada límite, con estado guardado — **Mantener** (pestaña Ajustes; se guarda en SQLite)
+- [x] Avisos en el chat cuando se alcanza un límite — **Mantener**
+- [x] Interruptor para aceptar o no peticiones del chat — **Mantener** (requerimiento nuevo, fase 5). Con las peticiones desactivadas, `!sr` y `!local` responden con un aviso y no añaden nada; el resto de comandos siguen funcionando. Está en la barra superior y en Ajustes, y se guarda entre reinicios
 - [x] Lista negra / ban de canciones con un clic: se saltan y se eliminan de la cola — **Mantener** (guardada en `data/blacklist.json`; también se retiran de la lista base y se rechazan en `!sr`)
-- [ ] Mensajes del bot editables por idioma — **Mantener**
-- [ ] Activar o desactivar cada mensaje del bot sin borrar su texto — **Mantener**
+- [x] Mensajes del bot editables por idioma — **Mantener**. Fase 5.5: pestaña Mensajes; cada mensaje `chat.*` se reescribe por idioma (es y en), con vista previa y las variables que admite. Máximo 400 caracteres y solo las variables que ya tiene el mensaje
+- [x] Activar o desactivar cada mensaje del bot sin borrar su texto — **Mantener**. Un mensaje desactivado deja al bot en silencio, pero la petición se sigue anotando en el historial. «Restaurar original» devuelve el texto y reactiva el mensaje
 
 ## 5. Historial de peticiones
 
-- [ ] Guardar canciones únicas pedidas desde el chat — **Mantener**
-- [ ] Búsqueda y filtros por usuario y por fecha — **Mantener**
+- [x] Guardar las peticiones pedidas desde el chat — **Mantener**. Fase 5: se guarda cada petición de `!sr` y `!local` con su resultado, también las rechazadas (URL no válida, no encontrada, vetada, peticiones desactivadas, límite de usuario o global…)
+- [x] Historial de reproducción — **Mantener** (requerimiento nuevo, fase 5). Cada canción que empieza a sonar, con su origen (petición o lista base) y quién la pidió
+- [x] Búsqueda y filtros por usuario y por fecha — **Mantener**. También por resultado en el historial de peticiones
+- [x] Borrar una entrada o limpiar todo el historial — **Mantener** (requerimiento nuevo, fase 5). Cada historial se limpia por separado; cada uno guarda como máximo 10.000 filas
 - [ ] Marcar favoritos en el historial — **Mantener**
-- [ ] Volver a añadir una canción del historial a la cola — **Mantener**
+- [x] Volver a añadir una canción del historial a la cola — **Mantener**
+- [x] Guardar una canción del historial en una lista de reproducción — **Mantener** (requerimiento nuevo, fase 5)
 
 ## 6. Biblioteca local (nueva)
 
@@ -75,11 +80,14 @@ Leyenda de la columna de decisión:
 
 ## 7. Panel de control de la lista de reproducción (nuevo)
 
-- [ ] Ver cola, lista base e historial en un único panel — **Mantener** (requerimiento nuevo)
+- [x] Ver cola, lista base e historial en un único panel — **Mantener** (requerimiento nuevo). Pestañas Cola, Lista base, Biblioteca local, Historial, Listas, Lista negra y Ajustes
 - [ ] Reordenar, eliminar y saltar pistas desde el panel — **Mantener** (requerimiento nuevo)
 - [x] Gestionar listas base (añadir, quitar, activar) — **Mantener** (requerimiento nuevo). La lista base es única (ver `docs/propuesta.md`, 3.5)
+- [x] Listas de reproducción propias: crear, renombrar y eliminar — **Mantener** (requerimiento nuevo, fase 5). Hasta 100 listas de 2.000 pistas, sin repetir pistas dentro de una lista; se guardan en SQLite
+- [x] Añadir a la cola una canción o toda una lista de reproducción — **Mantener** (requerimiento nuevo, fase 5). Se saltan las pistas vetadas o que ya no están en la biblioteca
 - [ ] Controles de reproducción: play, pausa, siguiente, aleatorio — **Mantener** (requerimiento nuevo)
 - [x] Ver el estado en vivo de la cola y de la canción actual — **Mantener** (requerimiento nuevo)
+- [x] Panel en dos columnas — **Mantener** (requerimiento nuevo, fase 5.5). A la izquierda (1/3) «Sonando ahora», con favorito, vetar y siguiente en una sola fila arriba, «Añadir canción» y «Cola»; a la derecha (2/3) el resto de pestañas. En pantallas estrechas se apilan
 
 ## 8. Widget de OBS
 

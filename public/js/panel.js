@@ -1,12 +1,16 @@
+import { confirmOnSecondClick, iconButton, textButton, titleSpan, trackLabel } from './dom.js';
+import { createHistoryView } from './history-view.js';
 import { currentLocale, initI18n, setLocale, t } from './i18n.js';
 import { icon } from './icons.js';
 import { createLocalPlayer } from './local-player.js';
+import { createMessagesView } from './messages-view.js';
 import { createPlayer } from './player.js';
+import { createPlaylistsView } from './playlists-view.js';
+import { createSettingsView } from './settings-view.js';
 
 const RECONNECT_DELAY_MS = 2000;
 const NOTICE_DURATION_MS = 4000;
 const VOLUME_SEND_INTERVAL_MS = 100;
-const CLEAR_CONFIRM_MS = 3000;
 const SEARCH_DEBOUNCE_MS = 250;
 
 const elements = {
@@ -22,6 +26,11 @@ const elements = {
   nowTitle: document.querySelector('#now-title'),
   queue: document.querySelector('#queue'),
   queueEmpty: document.querySelector('#queue-empty'),
+  queueClear: document.querySelector('#queue-clear'),
+  queueClearLabel: document.querySelector('#queue-clear span'),
+  queueSaveForm: document.querySelector('#queue-save-form'),
+  queueSaveName: document.querySelector('#queue-save-name'),
+  queueSave: document.querySelector('#queue-save'),
   notices: document.querySelector('#notices'),
   baseListForm: document.querySelector('#baselist-form'),
   baseListInput: document.querySelector('#baselist-input'),
@@ -64,11 +73,11 @@ let localPlayer = null;
 let searchTimer = null;
 let connection = 'connecting';
 let socket = null;
+const views = [];
 let player = null;
 let loadedId = null;
 let adjustingVolume = false;
 let lastVolumeSent = 0;
-let clearTimer = null;
 
 function send(message) {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -103,11 +112,6 @@ function setFavoriteButton(button, favorite) {
   button.setAttribute('aria-label', favoriteLabel(favorite));
 }
 
-// Las pistas locales muestran "artista - título"; las de YouTube, solo el título.
-function trackLabel(track) {
-  return track.artist ? `${track.artist} - ${track.title}` : track.title;
-}
-
 function renderNow() {
   const { current } = state;
   elements.nowTitle.textContent = current ? trackLabel(current) : t('now.empty');
@@ -123,18 +127,6 @@ function renderNow() {
 function renderVolume() {
   if (!adjustingVolume) elements.volume.value = state.volume;
   elements.volumeValue.textContent = `${elements.volume.value}%`;
-}
-
-// Botón con icono y texto accesible (título y aria-label).
-function iconButton({ name, label, className = '', onClick }) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = `icon ${className}`.trim();
-  button.replaceChildren(icon(name));
-  button.title = label;
-  button.setAttribute('aria-label', label);
-  button.addEventListener('click', onClick);
-  return button;
 }
 
 function favoriteButton(track) {
@@ -154,23 +146,6 @@ function banButton(track) {
     className: 'danger',
     onClick: () => send({ type: 'ban.add', id: track.id }),
   });
-}
-
-function textButton(label, className, onClick) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = className;
-  button.textContent = label;
-  button.addEventListener('click', onClick);
-  return button;
-}
-
-function titleSpan(title) {
-  const span = document.createElement('span');
-  span.className = 'track-title';
-  span.textContent = title;
-  span.title = title;
-  return span;
 }
 
 function durationSpan(seconds) {
@@ -194,6 +169,8 @@ function renderQueue() {
     return item;
   }));
   elements.queueEmpty.hidden = state.queue.length > 0;
+  elements.queueClear.disabled = state.queue.length === 0;
+  elements.queueSave.disabled = !state.current && state.queue.length === 0;
   elements.countQueue.textContent = state.queue.length;
 }
 
@@ -351,6 +328,8 @@ function syncPlayer() {
 }
 
 function handleMessage(message) {
+  for (const view of views) view.handleMessage(message);
+
   switch (message.type) {
     case 'state':
       state = message.data;
@@ -383,6 +362,7 @@ function handleMessage(message) {
     case 'error':
       showNotice(t(message.key), 'error');
       renderQueue();
+      for (const view of views) view.render();
       break;
   }
 }
@@ -414,21 +394,23 @@ function setupBaseListEvents() {
   elements.baseListStart.addEventListener('click', () => send({ type: 'baselist.start', mode: 'sequential' }));
   elements.baseListShuffle.addEventListener('click', () => send({ type: 'baselist.start', mode: 'shuffle' }));
   elements.baseListStop.addEventListener('click', () => send({ type: 'baselist.stop' }));
-  elements.baseListClear.addEventListener('click', () => {
-    // Doble pulsación en lugar de confirm() nativo.
-    if (clearTimer) {
-      clearTimeout(clearTimer);
-      clearTimer = null;
-      elements.baseListClearLabel.textContent = t('baselist.clear');
-      send({ type: 'baselist.clear' });
-      return;
-    }
+  confirmOnSecondClick(elements.baseListClear, elements.baseListClearLabel, {
+    labelKey: 'baselist.clear',
+    confirmKey: 'baselist.clearConfirm',
+    onConfirm: () => send({ type: 'baselist.clear' }),
+  });
+}
 
-    elements.baseListClearLabel.textContent = t('baselist.clearConfirm');
-    clearTimer = setTimeout(() => {
-      clearTimer = null;
-      elements.baseListClearLabel.textContent = t('baselist.clear');
-    }, CLEAR_CONFIRM_MS);
+function setupQueueEvents() {
+  confirmOnSecondClick(elements.queueClear, elements.queueClearLabel, {
+    labelKey: 'queue.clear',
+    confirmKey: 'queue.clearConfirm',
+    onConfirm: () => send({ type: 'queue.clear' }),
+  });
+  elements.queueSaveForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    send({ type: 'playlist.saveQueue', name: elements.queueSaveName.value.trim() });
+    elements.queueSaveName.value = '';
   });
 }
 
@@ -454,6 +436,8 @@ const BUTTON_ICONS = {
   '#baselist-shuffle': 'shuffle',
   '#baselist-stop': 'stop',
   '#baselist-clear': 'trash',
+  '#queue-clear': 'trash',
+  '#queue-save': 'bookmark',
   '#library-rescan': 'refresh',
 };
 
@@ -475,6 +459,7 @@ function setupEvents() {
     renderQueue();
     renderBaseList();
     renderLibrary();
+    for (const view of views) view.render();
   });
 
   elements.addForm.addEventListener('submit', (event) => {
@@ -492,6 +477,7 @@ function setupEvents() {
   });
 
   setupBaseListEvents();
+  setupQueueEvents();
   setupLibraryEvents();
 
   const sendVolume = () => send({ type: 'playback.volume', volume: Number(elements.volume.value) });
@@ -520,6 +506,12 @@ function setupSortable() {
 
 async function start() {
   await initI18n();
+  views.push(
+    createSettingsView({ send }),
+    createHistoryView({ send }),
+    createPlaylistsView({ send }),
+    createMessagesView({ send }),
+  );
   setupIcons();
   setupEvents();
   setupTabs();
@@ -529,6 +521,7 @@ async function start() {
   renderQueue();
   renderBaseList();
   renderLibrary();
+  for (const view of views) view.render();
   connect();
 
   localPlayer = createLocalPlayer({

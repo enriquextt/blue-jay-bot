@@ -125,3 +125,19 @@ export async function fetchPlaylistVideos(playlistId, apiKey, fetchImpl = fetch)
   }
   return videos;
 }
+
+const VIDEOS_ENDPOINT = 'https://www.googleapis.com/youtube/v3/videos';
+
+// Título y si el vídeo se puede incrustar, con videos.list (1 unidad de cuota). Devuelve null si el vídeo no
+// existe o es privado. Lanza un error si la API falla (clave inválida, cuota agotada, red).
+export async function fetchVideoInfo(videoId, apiKey, fetchImpl = fetch) {
+  const params = new URLSearchParams({ part: 'snippet,status', id: videoId, key: apiKey });
+
+  const response = await fetchImpl(`${VIDEOS_ENDPOINT}?${params}`, { signal: AbortSignal.timeout(TITLE_TIMEOUT_MS) });
+  if (!response.ok) throw new Error(`youtube.videos ${response.status}`);
+
+  const item = (await response.json()).items?.[0];
+  if (typeof item?.snippet?.title !== 'string') return null;
+
+  return { title: item.snippet.title.slice(0, TITLE_MAX_LENGTH), embeddable: item.status?.embeddable !== false };
+}

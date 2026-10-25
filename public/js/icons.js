@@ -12,6 +12,7 @@ const SHAPES = {
   skipNext: [['path', 'M6 5l9 7-9 7zM18 5v14']],
   shuffle: [['path', 'M16 4h4v4M4 20L20 4M20 16v4h-4M15 15l5 5M4 4l5 5']],
   trash: [['path', 'M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3']],
+  bookmark: [['path', 'M6 4h12v16l-6-4-6 4z']],
   refresh: [['path', 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5']],
 };
 

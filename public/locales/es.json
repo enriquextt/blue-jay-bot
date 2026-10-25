@@ -24,7 +24,11 @@
   "queue": {
     "title": "Cola",
     "empty": "La cola está vacía.",
-    "remove": "Quitar"
+    "remove": "Quitar",
+    "clear": "Limpiar cola",
+    "clearConfirm": "¿Seguro? Pulsa otra vez",
+    "saveName": "Nombre de la lista nueva",
+    "save": "Guardar cola como lista"
   },
   "errors": {
     "invalidMessage": "Mensaje no válido.",
@@ -39,12 +43,20 @@
     "baseListFull": "La lista base está llena.",
     "localOnly": "La carpeta solo se puede cambiar desde el equipo donde corre el servidor.",
     "folderInvalid": "La carpeta no existe, no es una ruta absoluta o no se puede leer.",
-    "autoplayBlocked": "El navegador bloqueó la reproducción automática. Pulsa play en el reproductor."
+    "autoplayBlocked": "El navegador bloqueó la reproducción automática. Pulsa play en el reproductor.",
+    "playlistInvalid": "El nombre no es válido o ya hay demasiadas listas.",
+    "playlistNotFound": "Esa lista ya no existe.",
+    "queueEmpty": "No hay nada en la cola ni sonando.",
+    "messageInvalid": "El texto no es válido: máximo 400 caracteres y solo las variables que ya tiene ese mensaje."
   },
   "notices": {
     "skippedUnavailable": "Saltada, no disponible: {{title}}",
     "playlistImported": "Playlist importada: {{added}} nuevas de {{total}} canciones.",
-    "banned": "Vetada: {{title}}"
+    "banned": "Vetada: {{title}}",
+    "savedToPlaylist": "Guardado en «{{name}}»: {{added}} nuevas.",
+    "alreadyInPlaylist": "Ya estaba en «{{name}}».",
+    "playlistQueued": "De «{{name}}» se añadieron a la cola {{added}} de {{total}} canciones.",
+    "replacedByLocal": "«{{title}}» no se pudo reproducir; suena la versión local «{{replacement}}»."
   },
   "chat": {
     "noPermission": "@{{user}}, solo los moderadores pueden usar ese comando.",
@@ -56,7 +68,9 @@
       "searchDisabled": "@{{user}}, la búsqueda por título no está activada; usa un enlace de YouTube.",
       "notFound": "@{{user}}, no encontré ninguna canción para «{{query}}».",
       "searchFailed": "@{{user}}, no se pudo buscar la canción ahora mismo. Prueba con un enlace.",
-      "banned": "@{{user}}, esa canción está vetada."
+      "banned": "@{{user}}, esa canción está vetada.",
+      "unavailable": "@{{user}}, «{{title}}» existe pero no se puede reproducir aquí y no encontré una versión en la biblioteca local.",
+      "replaced": "@{{user}}, «{{original}}» no se puede reproducir aquí; suena la versión local «{{title}}»."
     },
     "queue": {
       "empty": "No hay nada sonando ni en la cola.",
@@ -92,6 +106,13 @@
       "usage": "@{{user}}, usa !local seguido del título, el artista o una palabra de la descripción de la canción.",
       "disabled": "@{{user}}, la biblioteca local no está disponible ahora mismo.",
       "notFound": "@{{user}}, no encontré ninguna pista local para «{{query}}». Si el título es corto, añade también el artista o el álbum."
+    },
+    "requestsDisabled": "@{{user}}, las peticiones están desactivadas por ahora.",
+    "limit": {
+      "user_one": "@{{user}}, ya tienes {{count}} petición activa; espera a que suene.",
+      "user_other": "@{{user}}, ya tienes {{count}} peticiones activas; espera a que suene alguna.",
+      "global_one": "@{{user}}, ya hay {{count}} petición activa en total. Prueba más tarde.",
+      "global_other": "@{{user}}, ya hay {{count}} peticiones activas en total. Prueba más tarde."
     }
   },
   "track": {
@@ -142,5 +163,105 @@
       "error": "No se pudo leer la carpeta de música."
     },
     "addToBaseList": "Añadir a la lista base"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "chat": "Peticiones del chat",
+    "chatLabel": "Aceptar peticiones (!sr y !local)",
+    "chatOn": "El chat puede pedir canciones.",
+    "chatOff": "Peticiones desactivadas: !sr y !local no añaden nada.",
+    "limits": "Límites de peticiones activas",
+    "limitsHelp": "Cuentan las canciones pedidas por el chat que están sonando o esperando en la cola.",
+    "userLimit": "Por usuario",
+    "globalLimit": "En total",
+    "local": "Biblioteca local",
+    "localFallback": "Sustituir los vídeos que no se pueden reproducir por su versión local",
+    "localFallbackHelp": "Si un enlace de YouTube existe pero no se puede reproducir aquí, se busca su título en la biblioteca local y suena esa pista; si no hay una coincidencia clara, la petición se rechaza o se salta. Para avisar antes de encolar hace falta la clave de YouTube."
+  },
+  "history": {
+    "title": "Historial",
+    "requests": "Peticiones",
+    "plays": "Reproducción",
+    "filterUser": "Filtrar por usuario",
+    "allOutcomes": "Todos los resultados",
+    "filterOutcome": "Filtrar por resultado",
+    "from": "Desde",
+    "to": "Hasta",
+    "target": "Guardar en la lista",
+    "noPlaylists": "Crea una lista en la pestaña Listas",
+    "empty": "No hay nada que mostrar.",
+    "showing": "Mostrando {{shown}} de {{total}}.",
+    "more": "Ver más",
+    "clear": "Limpiar historial",
+    "clearConfirm": "¿Seguro? Pulsa otra vez",
+    "delete": "Borrar del historial",
+    "addToQueue": "Añadir a la cola",
+    "saveToPlaylist": "Guardar en la lista elegida",
+    "by": "pedida por {{user}}",
+    "origin": {
+      "request": "petición",
+      "base": "lista base"
+    },
+    "kind": {
+      "link": "enlace",
+      "search": "búsqueda",
+      "local": "biblioteca"
+    },
+    "outcome": {
+      "accepted": "Aceptada",
+      "invalid_url": "URL no válida",
+      "not_found": "No encontrada",
+      "search_failed": "Búsqueda fallida",
+      "search_disabled": "Búsqueda desactivada",
+      "library_disabled": "Sin biblioteca",
+      "banned": "Vetada",
+      "disabled": "Peticiones desactivadas",
+      "limit_user": "Límite de usuario",
+      "limit_global": "Límite global",
+      "replaced": "Sustituida por local",
+      "unavailable": "No reproducible"
+    }
+  },
+  "playlists": {
+    "title": "Listas",
+    "namePlaceholder": "Nombre de la lista nueva",
+    "create": "Crear lista",
+    "empty": "Todavía no hay listas.",
+    "open": "Abrir",
+    "back": "Volver a las listas",
+    "rename": "Renombrar",
+    "delete": "Eliminar lista",
+    "deleteConfirm": "¿Seguro? Pulsa otra vez",
+    "queueAll": "Añadir toda la lista a la cola",
+    "addToQueue": "Añadir a la cola",
+    "removeItem": "Quitar de la lista",
+    "itemsEmpty": "La lista está vacía. Guarda canciones desde el historial.",
+    "count_one": "{{count}} canción",
+    "count_other": "{{count}} canciones"
+  },
+  "messages": {
+    "title": "Mensajes",
+    "intro": "Reescribe lo que responde el bot en el chat. Las variables van entre dos llaves y se sustituyen al responder. Un mensaje desactivado deja al bot en silencio. Si dejas el texto vacío o igual al original, vuelve al original.",
+    "language": "Idioma que editas",
+    "botLanguage": "El bot responde en: {{language}}.",
+    "search": "Buscar un mensaje",
+    "enabled": "Activado",
+    "custom": "Personalizado",
+    "reset": "Restaurar original",
+    "params": "Variables:",
+    "preview": "Vista previa:",
+    "empty": "No hay mensajes que coincidan.",
+    "form": {
+      "zero": "cero",
+      "one": "singular",
+      "two": "dos",
+      "few": "pocos",
+      "many": "muchos",
+      "other": "plural"
+    },
+    "group": {
+      "general": "Generales",
+      "limit": "Límites de peticiones"
+    }
   }
 }

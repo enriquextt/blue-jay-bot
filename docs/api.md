@@ -2,7 +2,7 @@
 
 Contrato entre el servidor, el panel de control, el widget de OBS y los adaptadores de chat. Es el mismo para el backend en Node.js y en Python (ver `docs/propuesta.md`, sección 3.1).
 
-Estado: **versión 0.5** (fases 0 a 4.5).
+Estado: **versión 0.7** (fases 0 a 5.5).
 
 ## 1. Convenciones
 
@@ -31,7 +31,7 @@ Devuelve la foto actual de la reproducción.
 - `current` es `null` si no hay ninguna canción sonando.
 - `queue` son las canciones pendientes, en orden de reproducción.
 - `volume` es el volumen del reproductor, entero de 0 a 100. El panel lo aplica al reproductor de YouTube.
-- `fallback` indica si la lista base está activa (`active`), en qué `mode` (`sequential` o `shuffle`) y si incluye toda la biblioteca local (`includeLibrary`). No se guarda entre reinicios.
+- `fallback` indica si la lista base está activa (`active`), en qué `mode` (`sequential` o `shuffle`) y si incluye toda la biblioteca local (`includeLibrary`). Todo el estado, incluido `fallback`, se guarda en SQLite y se recupera al arrancar.
 - `favorite` es `true` si la pista es un favorito de la lista base.
 - Una pista local lleva `source: "local"`, `localId` y `artist` en lugar de `videoId` (ver sección 4).
 
@@ -65,6 +65,13 @@ Ruta: `ws://<host>/ws`. Todos los cambios de estado se difunden a todos los clie
 | `baselist` | `data`: `{ items, banned }` | Al conectar y después de cada cambio en la lista base o en la lista negra |
 | `library` | `data`: `{ configured, folderName, status, count }` | Al conectar y cuando cambia la carpeta o el escaneo. `status` es `none`, `scanning`, `ready` o `error`. `folderName` es solo el nombre de la carpeta, nunca la ruta |
 | `library.results` | `query`, `items`, `total` | Respuesta a `library.search`. Solo llega al cliente que preguntó. Cada ítem es `{ id, source, localId, title, artist, duration, favorite }` con `id` igual a `localId` y `duration` en segundos (`null` si se desconoce) |
+| `settings` | `data`: `{ chatEnabled, localFallback, limits: { user: { enabled, max }, global: { enabled, max } } }` | Al conectar y después de cada cambio de ajustes |
+| `messages` | `data`: `{ language, items }` | Al conectar y después de cada cambio en los mensajes del bot. `language` es el idioma en que responde el bot. Cada ítem es `{ key, enabled, params, forms }`; cada forma, `{ leaf, form, defaults, custom }` (ver sección 6.6) |
+| `playlists` | `data`: `[{ id, name, count }]` | Al conectar y después de cada cambio en las listas de reproducción (crear, renombrar, eliminar, añadir o quitar pistas) |
+| `playlist` | `data`: `{ id, name, items }` | Respuesta a `playlist.open`. Solo llega al cliente que preguntó. Cada ítem es una pista (ver sección 4) con un `id` numérico propio de la lista |
+| `playlist.created` | `id` | Respuesta a `playlist.create`. Solo llega al cliente que lo pidió, después del mensaje `playlists` que ya incluye la lista nueva |
+| `history.changed` | — | Al conectar y cada vez que cambia algún historial. No lleva datos: el cliente vuelve a pedir lo que está mirando con `history.query` |
+| `history.results` | `kind`, `seq`, `total`, `items` | Respuesta a `history.query`. Solo llega al cliente que preguntó; `seq` es el que envió |
 | `notice` | `key`, `params?` | Aviso informativo (por ejemplo, saltada una canción no disponible) |
 | `error` | `key`, `params?` | El comando recibido no se pudo aplicar. Solo llega al cliente que lo envió |
 
@@ -84,7 +91,7 @@ Ejemplo de aviso:
 | `playback.next` | — | Salta la canción que suena |
 | `playback.volume` | `volume` (entero 0–100) | Ajusta el volumen global y lo difunde en `state`. Fuera de rango o no entero: `errors.invalidMessage` |
 | `playback.ended` | `id` | El reproductor avisa de que la canción terminó. Si `id` no es la que suena, se ignora |
-| `playback.unavailable` | `id` | El reproductor no puede reproducir la canción. Se salta y se envía un `notice`. Si `id` no es la que suena, se ignora |
+| `playback.unavailable` | `id` | El reproductor no puede reproducir la canción. Si es una petición de YouTube, `settings.localFallback` está activado y su título coincide con una pista de la biblioteca, esa pista sustituye a la que suena (misma persona, mismo origen; `notice` `notices.replacedByLocal` con `title` y `replacement`, y aviso en el chat). Si no, se salta y se envía un `notice`. Si `id` no es la que suena, se ignora |
 | `baselist.add` | `url` (string, máximo 500 caracteres) | Añade a la lista base un vídeo (URL o ID) o una playlist de YouTube (URL de `/playlist` o con `list` sin `v`, o ID que empiece por `PL`, `UU`, `FL` u `OL`). Una URL de vídeo con `list` cuenta como vídeo. Las playlists exigen la clave de API, importan hasta 1.000 vídeos, omiten duplicados y vetados, y devuelven al cliente un `notice` `notices.playlistImported` con `added` y `total` |
 | `baselist.remove` | `id` | Quita una pista de la lista base |
 | `baselist.clear` | — | Vacía la lista base |
@@ -99,6 +106,25 @@ Ejemplo de aviso:
 | `library.search` | `query` (string, máximo 100 caracteres) | Busca por título, artista, álbum, comentario, descripción, subtítulo y nombre de archivo, sin distinguir mayúsculas ni acentos. Todos los términos deben aparecer, cada uno en cualquier campo. Ordena por relevancia (título, luego artista, luego el resto) y devuelve `library.results` con hasta 50 pistas (las vetadas no salen). Una consulta vacía lista las primeras por orden alfabético. Esta búsqueda del panel no es estricta: un título corto basta (ver `!sr` en la sección 6.2) |
 | `library.queue` | `id` (`localId`) | Añade la pista local al final de la cola. Si está vetada, `errors.trackBanned` |
 | `library.addToBaseList` | `id` (`localId`) | Añade la pista local a la lista base sin marcarla como favorita (si ya está, no hace nada). Si está vetada, `errors.trackBanned`; si la lista está llena, `errors.baseListFull` |
+| `queue.clear` | — | Vacía las canciones pendientes; la que suena no se interrumpe |
+| `settings.update` | `chatEnabled?` (booleano), `localFallback?` (booleano), `limits?`: `{ user?, global? }` con `enabled?` (booleano) y `max?` (entero de 1 a 1.000) | Cambia los ajustes indicados y los difunde en `settings`. Es todo o nada: un valor no válido da `errors.invalidMessage` y no cambia nada |
+| `message.setText` | `locale` (`es` o `en`), `leaf` (clave de la forma, por ejemplo `chat.sr.added`), `text` | Cambia el texto de una forma del mensaje en ese idioma y lo difunde en `messages`. Un texto vacío, o igual al original, vuelve al original. Si no es válido, `errors.messageInvalid` y no cambia nada |
+| `message.setEnabled` | `key` (por ejemplo `chat.sr.added`), `enabled` (booleano) | Activa o desactiva el mensaje, con todas sus formas, sin tocar su texto |
+| `message.reset` | `key` | Devuelve el mensaje a su texto original en todos los idiomas y lo activa |
+| `history.query` | `kind` (`requests` o `plays`), `seq?`, `user?` (texto contenido en el usuario, máximo 50 caracteres), `outcome?` (solo peticiones; ver sección 6.5), `from?` / `to?` (milisegundos, ambos incluidos), `offset?` (por defecto 0), `limit?` (por defecto 50, máximo 500) | Devuelve `history.results` con lo más reciente primero. En `requests`, cada ítem es `{ id, createdAt, platform, user, command, input, kind, outcome, track }`; en `plays`, `{ id, playedAt, origin, requestedBy, track }`. `track` es `null` si la petición se rechazó antes de elegir una canción. `user` filtra por el usuario (`requests`) o por quien pidió la canción (`plays`) |
+| `history.delete` | `kind`, `id` (entero) | Borra una fila del historial |
+| `history.clear` | `kind` | Vacía ese historial; el otro no se toca |
+| `history.queue` | `kind`, `id` | Añade al final de la cola la canción de esa fila. Si está vetada, `errors.trackBanned`; si es local y ya no está en la biblioteca, o la fila no tiene canción, `errors.trackNotFound` |
+| `playlist.create` | `name` (máximo 60 caracteres tras recortar) | Crea una lista y responde `playlist.created`. Con un nombre vacío o con 100 listas, `errors.playlistInvalid` |
+| `playlist.rename` | `id`, `name` | Cambia el nombre de la lista |
+| `playlist.remove` | `id` | Elimina la lista con sus pistas |
+| `playlist.open` | `id` | Devuelve `playlist` con las pistas de la lista. Si no existe, `errors.playlistNotFound` |
+| `playlist.addTrack` | `id`, `trackId` | Guarda en la lista la canción actual, de la cola, de la lista base o de la biblioteca (por el `id` que lleva en el panel). Responde con un `notice` `notices.savedToPlaylist` o `notices.alreadyInPlaylist` |
+| `playlist.addFromHistory` | `id`, `kind`, `itemId` | Guarda en la lista la canción de una fila del historial |
+| `playlist.saveQueue` | `name` | Crea una lista con la canción actual y la cola. Con la cola vacía, `errors.queueEmpty` |
+| `playlist.removeItem` | `itemId` | Quita una pista de su lista |
+| `playlist.queueItem` | `itemId` | Añade al final de la cola una pista de una lista (vetada: `errors.trackBanned`) |
+| `playlist.queueAll` | `id` | Añade toda la lista a la cola, en orden, saltando las vetadas y las locales que ya no existen. Lanza `notices.playlistQueued` con `name`, `added` y `total` |
 
 Los comandos `playback.ended` y `playback.unavailable` son idempotentes: enviar dos veces el mismo `id` no salta dos canciones.
 
@@ -122,6 +148,10 @@ Reglas de la lista base:
 | `errors.playlistEmpty` | La playlist no tiene vídeos disponibles |
 | `errors.localOnly` | Se intentó cambiar la carpeta de música desde otro equipo |
 | `errors.folderInvalid` | La carpeta no existe, no es una ruta absoluta o no se puede leer |
+| `errors.messageInvalid` | El texto de un mensaje del bot supera los 400 caracteres o usa una variable que ese mensaje no tiene |
+| `errors.playlistInvalid` | El nombre de la lista no es válido o ya hay 100 listas |
+| `errors.playlistNotFound` | La lista ya no existe |
+| `errors.queueEmpty` | Se intentó guardar la cola y no hay nada sonando ni pendiente |
 | `errors.serverError` | Error interno inesperado |
 
 ## 4. Modelo de datos de una canción
@@ -149,7 +179,7 @@ Clave de pista (`key`)  identifica una pista aunque cambie su `id`: `youtube:<vi
                         La usan la lista base, la cola y la lista negra.
 ```
 
-La lista base y la lista negra se guardan en `data/baselist.json` y `data/blacklist.json` (ignorados por git). Son listas de `{ source?, videoId | localId, artist?, title, favorite }` y `{ source?, videoId | localId, artist?, title }`. Sin `source` se asume YouTube, así que los archivos guardados en la fase 3 siguen siendo válidos. Las entradas con un `videoId` o `localId` no válido se ignoran al cargar.
+Los ajustes, el estado de la reproducción, los historiales y las listas de reproducción se guardan en SQLite, en `data/blue-jay.db` (ignorado por git; ver la sección 5.1). La lista base y la lista negra se guardan en `data/baselist.json` y `data/blacklist.json` (ignorados por git). Son listas de `{ source?, videoId | localId, artist?, title, favorite }` y `{ source?, videoId | localId, artist?, title }`. Sin `source` se asume YouTube, así que los archivos guardados en la fase 3 siguen siendo válidos. Las entradas con un `videoId` o `localId` no válido se ignoran al cargar.
 
 La carpeta de música se guarda en `data/library.json` (`{ "folder": "…" }`, ignorado por git). El índice de pistas vive en memoria y se reconstruye al arrancar.
 
@@ -166,6 +196,13 @@ La carpeta de música se guarda en `data/library.json` (`{ "folder": "…" }`, i
   - Antes de servir un archivo se comprueba con `realpath` que sigue dentro de la carpeta, por si lo sustituyeron por un enlace.
   - Formatos aceptados: `.mp3`, `.flac`, `.ogg`, `.m4a` y `.wav`.
   - Las etiquetas son entrada no confiable: se recortan (título y artista a 200 caracteres, cada nota a 500, hasta 10 notas) y el panel las muestra siempre con `textContent`. Un archivo ilegible o sin etiquetas se indexa con los datos de su nombre.
+
+### 5.1 Base de datos
+
+- SQLite (`better-sqlite3`) en `data/blue-jay.db`, con el modo WAL (junto al archivo aparecen `-wal` y `-shm`). La versión del esquema está en `PRAGMA user_version`; las migraciones están en `server/db/database.js` y se aplican solas al arrancar.
+- Tablas: `kv` (ajustes y estado guardado, como JSON), `request_history`, `play_history`, `playlists` y `playlist_items`.
+- Todas las consultas usan parámetros, nunca texto concatenado; los filtros del historial se validan además en el WebSocket. Las entradas del chat que se guardan (texto de la petición, usuario) son entrada no confiable: se recortan y el panel las muestra siempre con `textContent`.
+- La base puede contener nombres de usuario del chat: no se comparte ni se incluye en exportaciones de ajustes.
 
 ## 6. Chat
 
@@ -205,10 +242,47 @@ Cada adaptador (`server/chat/`) entrega al núcleo:
 ### 6.4 Búsqueda en YouTube
 
 - Usa `search.list` de YouTube Data API v3 con `type=video`, `videoEmbeddable=true` y `maxResults=1`. Cada búsqueda cuesta 100 unidades de cuota (el límite diario por defecto es 10.000, unas 100 búsquedas al día).
+- Con `settings.localFallback` activado, `!sr <enlace>` consulta además `videos.list` (1 unidad) para saber si el vídeo se puede incrustar (ver `docs/propuesta.md`, registro del 25 de octubre de 2026). Si no se puede, se sustituye por la pista de la biblioteca con el mismo título o se rechaza (`chat.sr.replaced` / `chat.sr.unavailable`). Si la API falla, se encola como siempre.
 - La clave está en `data/youtube.json` (`{ "apiKey": "…" }`, ignorado por git). Sin clave, `!sr` solo acepta enlaces e IDs. Cómo conseguirla: [`clave-youtube.md`](clave-youtube.md).
 - Si la API falla (cuota agotada, clave inválida o red), el bot responde con un aviso y no toca la cola.
 
+### 6.5 Peticiones: interruptor, límites e historial
+
+Antes de buscar nada, `!sr` y `!local` (con texto) comprueban, por este orden:
+
+1. **Peticiones desactivadas** (`settings.chatEnabled` en `false`): responde `chat.requestsDisabled` y no hace nada más. El resto de comandos no se ven afectados.
+2. **Límite por usuario**: si el usuario ya tiene `limits.user.max` peticiones activas (la que suena y las pendientes), responde `chat.limit.user`.
+3. **Límite global**: si ya hay `limits.global.max` peticiones activas en total, responde `chat.limit.global`.
+
+Cada petición queda en el historial con uno de estos resultados (`outcome`):
+
+| `outcome` | Significado |
+|---|---|
+| `accepted` | Se añadió a la cola |
+| `replaced` | El vídeo existe pero no se puede reproducir aquí; se añadió en su lugar la pista de la biblioteca con el mismo título |
+| `unavailable` | El vídeo existe pero no se puede reproducir aquí y no hay una pista local que coincida |
+| `invalid_url` | Era un enlace (`http://` o `https://`) que no es de YouTube o no tiene un ID válido |
+| `not_found` | La búsqueda (en la biblioteca o en YouTube) no encontró nada |
+| `search_failed` | La API de YouTube falló (cuota, clave o red) |
+| `search_disabled` | No hay clave de YouTube y el texto no era un enlace |
+| `library_disabled` | `!local` sin biblioteca o con la biblioteca vacía |
+| `banned` | La canción está en la lista negra |
+| `disabled` | Las peticiones estaban desactivadas |
+| `limit_user` / `limit_global` | Se alcanzó el límite de peticiones |
+
+`kind` indica cómo se interpretó el texto: `link` (enlace o ID de YouTube), `search` (título) o `local` (`!local`). Un `!sr` sin texto, que solo recibe la ayuda de uso, no se anota.
+
+### 6.6 Mensajes del bot
+
+Las respuestas del bot son las claves `chat.*` de `public/locales/es.json` y `en.json`. Se pueden reescribir o desactivar desde el panel (pestaña Mensajes); lo personalizado se guarda en SQLite (`kv`, clave `messages`) y los archivos de idioma no se tocan.
+
+- Un **mensaje** es la clave que usa el código (`chat.when.position`). Si tiene plurales, tiene varias **formas** (`chat.when.position_one`, `chat.when.position_other`) que se editan por separado; se activan y desactivan juntas.
+- `params` son las variables que admite (`user`, `title`, `count`…): las que aparecen en sus textos originales, más `count` si tiene plurales.
+- `defaults` y `custom` de cada forma son objetos por idioma (`{ "es": "…", "en": "…" }`); `custom` solo trae los idiomas con texto propio.
+- Un texto válido ocupa una sola línea (los saltos se aplanan), tiene como máximo 400 caracteres y solo usa variables de su mensaje escritas `{{nombre}}`. No se admiten formatos ni anidados de i18next.
+- Un mensaje desactivado no se envía al chat. La petición que lo habría provocado se anota igualmente en el historial.
+- El bot responde en el idioma de la variable `LANGUAGE`; el otro idioma se puede editar igualmente, para cuando se cambie.
+
 ## 7. Pendiente
 
-- *(fase 5)* Persistencia entre reinicios de la cola, la canción actual, el volumen y `fallback` (hoy solo se guardan la lista base y la lista negra).
 - Adaptadores de Kick y YouTube con el mismo contrato.

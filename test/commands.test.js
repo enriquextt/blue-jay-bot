@@ -304,3 +304,181 @@ test('!local explica que un título corto necesita el artista o el álbum', asyn
 
   assert.match(await say('ana', '!local nada'), /Si el título es corto, añade también el artista o el álbum/);
 });
+
+function historySetup(options = {}) {
+  const logged = [];
+  const history = { logRequest: (entry) => logged.push(entry) };
+  const state = {
+    chatEnabled: true,
+    limits: { user: { enabled: true, max: 2 }, global: { enabled: true, max: 3 } },
+  };
+  const settings = { get: () => state };
+  return setup({ history, settings, ...options }).then((context) => ({ ...context, logged, state }));
+}
+
+test('con las peticiones desactivadas !sr y !local responden y no tocan la cola', async () => {
+  const { queue, say, logged, state, changes } = await historySetup({ library: fakeLibrary() });
+  state.chatEnabled = false;
+
+  assert.match(await say('ana', `!sr ${ID_A}`), /peticiones están desactivadas/);
+  assert.match(await say('ana', '!local rickroll'), /peticiones están desactivadas/);
+  assert.equal(queue.snapshot().current, null);
+  assert.equal(changes.count, 0);
+  assert.deepEqual(logged.map((entry) => entry.outcome), ['disabled', 'disabled']);
+
+  // El resto de comandos siguen disponibles.
+  assert.match(await say('ana', '!queue'), /nada sonando/);
+  assert.match(await say('mod', '!volume 30', true), /Volumen ajustado/);
+
+  state.chatEnabled = true;
+  assert.match(await say('ana', `!sr ${ID_A}`), /suena ahora/);
+});
+
+test('el límite por usuario cuenta la canción que suena y la cola, y se libera al sonar', async () => {
+  const { queue, say, logged } = await historySetup();
+
+  await say('ana', `!sr ${ID_A}`);
+  await say('ana', `!sr ${ID_B}`);
+  assert.match(await say('ana', `!sr ${ID_C}`), /ya tienes 2 peticiones activas/);
+  assert.equal(queue.snapshot().queue.length, 1);
+  assert.equal(logged.at(-1).outcome, 'limit_user');
+
+  assert.match(await say('bea', `!sr ${ID_C}`), /posición 2/);
+
+  queue.advance();
+  assert.match(await say('ana', `!sr ${ID_A}`), /añadida/);
+});
+
+test('el límite global se aplica a todos los usuarios', async () => {
+  const { say, logged } = await historySetup();
+
+  await say('ana', `!sr ${ID_A}`);
+  await say('bea', `!sr ${ID_B}`);
+  await say('cris', `!sr ${ID_C}`);
+  assert.match(await say('dani', `!sr ${ID_A}`), /ya hay 3 peticiones activas en total/);
+  assert.equal(logged.at(-1).outcome, 'limit_global');
+});
+
+test('los límites desactivados no se aplican y las canciones de la lista base no cuentan', async () => {
+  const { queue, say, state } = await historySetup();
+  state.limits.user.enabled = false;
+  state.limits.global.enabled = false;
+
+  for (const id of [ID_A, ID_B, ID_C, ID_A, ID_B]) await say('ana', `!sr ${id}`);
+  assert.equal(queue.activeRequests('twitch:ana'), 5);
+
+  const base = new PlaybackQueue({ fallback: () => ({ source: 'youtube', videoId: ID_A, title: 'Base' }) });
+  base.advance();
+  assert.equal(base.activeRequests(), 0);
+});
+
+test('el historial anota el resultado de cada petición, incluidos los enlaces inválidos', async () => {
+  const library = fakeLibrary();
+  const blacklist = { has: ({ videoId }) => videoId === ID_C };
+  const searchVideo = async (query) => (query === 'nada' ? null : ID_B);
+  const { say, logged } = await historySetup({ blacklist, searchVideo, library });
+
+  await say('ana', `!sr ${ID_A}`);
+  await say('ana', '!sr https://example.com/x');
+  await say('ana', '!sr nada');
+  await say('ana', `!sr ${ID_C}`);
+  await say('ana', '!sr rickroll');
+  await say('ana', '!sr');
+
+  assert.deepEqual(
+    logged.map(({ kind, outcome }) => [kind, outcome]),
+    [['link', 'accepted'], ['link', 'invalid_url'], ['search', 'not_found'], ['link', 'banned'], ['search', 'accepted']],
+  );
+  assert.equal(logged[0].track.videoId, ID_A);
+  assert.equal(logged[1].track, null);
+  assert.equal(logged[1].input, 'https://example.com/x');
+  assert.equal(logged[4].track.source, 'local');
+  assert.deepEqual(
+    { platform: logged[0].platform, user: logged[0].user, command: logged[0].command },
+    { platform: 'twitch', user: 'ana', command: 'sr' },
+  );
+});
+
+test('!local anota la biblioteca no disponible y las pistas que no encuentra', async () => {
+  const empty = await historySetup();
+  await empty.say('ana', '!local algo');
+  assert.deepEqual(empty.logged.map((entry) => [entry.kind, entry.outcome]), [['local', 'library_disabled']]);
+
+  const withLibrary = await historySetup({ library: fakeLibrary() });
+  await withLibrary.say('ana', '!local nada');
+  await withLibrary.say('ana', '!local rickroll');
+  assert.deepEqual(withLibrary.logged.map((entry) => entry.outcome), ['not_found', 'accepted']);
+});
+
+function playabilitySetup(info, options = {}) {
+  const state = { chatEnabled: true, localFallback: true, limits: { user: { enabled: false, max: 1 }, global: { enabled: false, max: 1 } } };
+  const calls = [];
+  const getVideoInfo = async (videoId) => {
+    calls.push(videoId);
+    if (info instanceof Error) throw info;
+    return info;
+  };
+  const logged = [];
+  const history = { logRequest: (entry) => logged.push(entry) };
+  return setup({ library: fakeLibrary(), settings: { get: () => state }, history, getVideoInfo, ...options })
+    .then((context) => ({ ...context, state, calls, logged }));
+}
+
+const RICK = { title: 'Rick Astley - Never Gonna Give You Up (Official Video)', embeddable: false };
+
+test('un enlace de un vídeo que no se puede incrustar se sustituye por su pista local', async () => {
+  const { queue, say, calls, logged, changes } = await playabilitySetup(RICK);
+
+  assert.match(await say('ana', `!sr https://youtu.be/${ID_A}`), /no se puede reproducir aquí; suena la versión local «Rick Astley - Never Gonna Give You Up»/);
+  assert.deepEqual(calls, [ID_A]);
+  const { current } = queue.snapshot();
+  assert.equal(current.source, 'local');
+  assert.equal(current.requestedBy, 'twitch:ana');
+  assert.deepEqual(logged.map((entry) => [entry.kind, entry.outcome]), [['link', 'replaced']]);
+  assert.equal(logged[0].track.source, 'local');
+  assert.equal(changes.count, 1);
+});
+
+test('si un vídeo que no se puede incrustar no tiene pista local, se rechaza la petición', async () => {
+  const { queue, say, logged, changes } = await playabilitySetup({ title: 'Canción que no tengo', embeddable: false });
+
+  assert.match(await say('ana', `!sr ${ID_A}`), /«Canción que no tengo» existe pero no se puede reproducir aquí/);
+  assert.equal(queue.snapshot().current, null);
+  assert.deepEqual(logged.map((entry) => entry.outcome), ['unavailable']);
+  assert.equal(changes.count, 0);
+});
+
+test('un mensaje desactivado no deja pasar la petición de un vídeo que no se puede incrustar', async () => {
+  const { queue, say } = await playabilitySetup({ title: 'Canción que no tengo', embeddable: false }, { t: () => null });
+
+  assert.equal(await say('ana', `!sr ${ID_A}`), null);
+  assert.equal(queue.snapshot().current, null);
+});
+
+test('un vídeo que sí se puede incrustar, o una API que falla, se encolan como siempre', async () => {
+  const playable = await playabilitySetup({ title: 'Otra', embeddable: true });
+  assert.match(await playable.say('ana', `!sr ${ID_A}`), /suena ahora/);
+  assert.equal(playable.queue.snapshot().current.source, 'youtube');
+
+  const failing = await playabilitySetup(new Error('cuota'));
+  assert.match(await failing.say('ana', `!sr ${ID_A}`), /suena ahora/);
+  assert.equal(failing.queue.snapshot().current.source, 'youtube');
+
+  const missing = await playabilitySetup(null);
+  assert.match(await missing.say('ana', `!sr ${ID_A}`), /suena ahora/);
+});
+
+test('con el interruptor apagado, sin clave o buscando por título no se consulta la reproducibilidad', async () => {
+  const off = await playabilitySetup(RICK);
+  off.state.localFallback = false;
+  await off.say('ana', `!sr ${ID_A}`);
+  assert.deepEqual(off.calls, []);
+  assert.equal(off.queue.snapshot().current.source, 'youtube');
+
+  const noKey = await playabilitySetup(RICK, { getVideoInfo: null });
+  assert.match(await noKey.say('ana', `!sr ${ID_A}`), /suena ahora/);
+
+  const search = await playabilitySetup(RICK, { searchVideo: async () => ID_B });
+  await search.say('ana', '!sr una canción cualquiera');
+  assert.deepEqual(search.calls, []);
+});

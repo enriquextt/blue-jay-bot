@@ -27,6 +27,9 @@ function applyTranslations() {
   for (const element of document.querySelectorAll('[data-i18n-placeholder]')) {
     element.placeholder = i18next.t(element.dataset.i18nPlaceholder);
   }
+  for (const element of document.querySelectorAll('[data-i18n-aria-label]')) {
+    element.setAttribute('aria-label', i18next.t(element.dataset.i18nAriaLabel));
+  }
 }
 
 export async function initI18n() {

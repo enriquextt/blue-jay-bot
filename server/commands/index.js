@@ -1,3 +1,5 @@
+import { findLocalMatch } from '../library/title-match.js';
+import { trackLabel as label } from '../tracks.js';
 import { parseVideoId } from '../youtube/youtube.js';
 
 const PREFIX = '!';
@@ -6,11 +8,6 @@ const TITLE_PREVIEW_LENGTH = 40;
 const MAX_VOLUME = 100;
 const MAX_SEARCH_LENGTH = 100;
 const LINK_PATTERN = /^https?:\/\//i;
-
-// Texto con el que el chat nombra una pista: las locales llevan el artista.
-function label(track) {
-  return track.artist ? `${track.artist} - ${track.title}` : track.title;
-}
 
 function preview(title) {
   return title.length > TITLE_PREVIEW_LENGTH ? `${title.slice(0, TITLE_PREVIEW_LENGTH - 1)}…` : title;
@@ -22,6 +19,9 @@ export function createCommands({
   library = null,
   fetchTitle,
   searchVideo = null,
+  getVideoInfo = null,
+  settings = null,
+  history = null,
   t,
   onChange,
   voteSkipThreshold = 3,
@@ -46,16 +46,72 @@ export function createCommands({
     return items[0] ?? null;
   }
 
-  // Añade la pista a la cola y responde con su posición.
-  function enqueue(message, entry) {
-    const user = message.user;
-    const title = label(entry);
-    const track = queue.add({ ...entry, requestedBy: requesterKey(message) });
+  // Anota la petición en el historial. `track` es la pista pedida si ya se eligió una.
+  function record({ message, command, input, kind }, outcome, track = null) {
+    history?.logRequest({ platform: message.platform, user: message.user, command, input, kind, outcome, track });
+  }
+
+  // Rechaza la petición: la anota con su motivo y devuelve la respuesta del chat.
+  function reject(request, outcome, key, params = {}) {
+    record(request, outcome);
+    return t(key, { user: request.message.user, ...params });
+  }
+
+  // Devuelve el motivo del rechazo si el chat no acepta peticiones o el usuario o la cola han llegado al límite.
+  function checkOpen(request) {
+    if (!settings) return null;
+
+    const { chatEnabled, limits } = settings.get();
+    if (!chatEnabled) return reject(request, 'disabled', 'chat.requestsDisabled');
+
+    if (limits.user.enabled && queue.activeRequests(requesterKey(request.message)) >= limits.user.max) {
+      return reject(request, 'limit_user', 'chat.limit.user', { count: limits.user.max });
+    }
+    if (limits.global.enabled && queue.activeRequests() >= limits.global.max) {
+      return reject(request, 'limit_global', 'chat.limit.global', { count: limits.global.max });
+    }
+    return null;
+  }
+
+  // Añade la pista a la cola y la anota en el historial con su resultado.
+  function add(request, entry, outcome = 'accepted') {
+    const track = queue.add({ ...entry, requestedBy: requesterKey(request.message) });
+    record(request, outcome, track);
     onChange();
+    return track;
+  }
+
+  // Añade la pista a la cola y responde con su posición.
+  function enqueue(request, entry) {
+    const user = request.message.user;
+    const title = label(entry);
+    const track = add(request, entry);
 
     const { current, queue: pending } = queue.snapshot();
     if (current.id === track.id) return t('chat.sr.playingNow', { user, title });
     return t('chat.sr.added', { user, title, position: pending.findIndex((item) => item.id === track.id) + 1 });
+  }
+
+  // Con la clave de YouTube, mira antes de encolar si el vídeo se puede reproducir aquí. Si existe pero no se
+  // puede incrustar, lo sustituye por la pista de la biblioteca que coincida con su título o rechaza la petición.
+  // Devuelve la respuesta del chat (null si ese mensaje está desactivado) o undefined si hay que seguir como
+  // siempre, incluida una API caída.
+  async function checkPlayable(request, videoId) {
+    if (!getVideoInfo || !settings?.get().localFallback) return undefined;
+
+    let info;
+    try {
+      info = await getVideoInfo(videoId);
+    } catch {
+      return undefined;
+    }
+    if (!info || info.embeddable) return undefined;
+
+    const match = findLocalMatch({ library, title: info.title, exclude: (track) => blacklist?.has(track) ?? false });
+    if (!match) return reject(request, 'unavailable', 'chat.sr.unavailable', { title: info.title });
+
+    add(request, match, 'replaced');
+    return t('chat.sr.replaced', { user: request.message.user, original: info.title, title: label(match) });
   }
 
   async function sr(message, args) {
@@ -63,39 +119,55 @@ export function createCommands({
     if (!args) return t('chat.sr.usage', { user });
 
     let videoId = parseVideoId(args);
+    const isLink = videoId !== null || LINK_PATTERN.test(args);
+    const request = { message, command: 'sr', input: args, kind: isLink ? 'link' : 'search' };
+
+    const closed = checkOpen(request);
+    if (closed) return closed;
+
     if (!videoId) {
-      if (LINK_PATTERN.test(args)) return t('chat.sr.invalid', { user });
+      if (isLink) return reject(request, 'invalid_url', 'chat.sr.invalid');
 
       // La biblioteca local tiene prioridad: solo se pregunta a YouTube si no hay coincidencia.
       const local = findLocal(args);
-      if (local) return enqueue(message, local);
+      if (local) return enqueue(request, local);
 
-      if (!searchVideo) return t('chat.sr.searchDisabled', { user });
+      if (!searchVideo) return reject(request, 'search_disabled', 'chat.sr.searchDisabled');
 
       const query = args.slice(0, MAX_SEARCH_LENGTH);
       try {
         videoId = await searchVideo(query);
       } catch {
-        return t('chat.sr.searchFailed', { user });
+        return reject(request, 'search_failed', 'chat.sr.searchFailed');
       }
-      if (!videoId) return t('chat.sr.notFound', { user, query });
+      if (!videoId) return reject(request, 'not_found', 'chat.sr.notFound', { query });
     }
 
-    if (blacklist?.has({ videoId })) return t('chat.sr.banned', { user });
+    if (blacklist?.has({ videoId })) return reject(request, 'banned', 'chat.sr.banned');
+
+    if (isLink) {
+      const reply = await checkPlayable(request, videoId);
+      if (reply !== undefined) return reply;
+    }
 
     const title = (await fetchTitle(videoId)) ?? videoId;
-    return enqueue(message, { videoId, title });
+    return enqueue(request, { videoId, title });
   }
 
   // Pide una pista solo de la biblioteca local, buscando por título, artista, álbum, comentario o descripción.
   function local(message, args) {
     const user = message.user;
     if (!args) return t('chat.local.usage', { user });
-    if (!library || library.status().count === 0) return t('chat.local.disabled', { user });
+
+    const request = { message, command: 'local', input: args, kind: 'local' };
+    const closed = checkOpen(request);
+    if (closed) return closed;
+
+    if (!library || library.status().count === 0) return reject(request, 'library_disabled', 'chat.local.disabled');
 
     const found = findLocal(args);
-    if (!found) return t('chat.local.notFound', { user, query: args.slice(0, MAX_SEARCH_LENGTH) });
-    return enqueue(message, found);
+    if (!found) return reject(request, 'not_found', 'chat.local.notFound', { query: args.slice(0, MAX_SEARCH_LENGTH) });
+    return enqueue(request, found);
   }
 
   function showQueue() {
