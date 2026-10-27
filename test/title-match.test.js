@@ -6,7 +6,8 @@ test('searchQueries quita el ruido de un título de YouTube', () => {
   assert.deepEqual(searchQueries('Rick Astley - Never Gonna Give You Up (Official Music Video)'), ['Rick Astley Never Gonna Give You Up']);
   assert.deepEqual(searchQueries('Queen – Bohemian Rhapsody [Remastered 2011]'), ['Queen Bohemian Rhapsody']);
   assert.deepEqual(searchQueries('Daft Punk - One More Time - Official Video'), ['Daft Punk One More Time']);
-  assert.deepEqual(searchQueries('Soda Stereo - De música ligera (Letra) | Canal Oficial'), ['Soda Stereo De música ligera']);
+  assert.deepEqual(searchQueries('Soda Stereo - De música ligera (Letra) | Canal Oficial'), ['Soda Stereo De música ligera Canal']);
+  assert.deepEqual(searchQueries('Artista | Canción • Álbum'), ['Artista Canción Álbum']);
   assert.deepEqual(searchQueries('Artista - Canción - Topic'), ['Artista Canción']);
   assert.deepEqual(searchQueries('Artista - Canción - Lyrics'), ['Artista Canción']);
 });
@@ -46,6 +47,26 @@ test('findLocalMatch usa la búsqueda estricta y prueba las variantes en orden',
   assert.equal(found, track);
   assert.deepEqual(library.calls.map((call) => call.query), ['Dua Lipa Levitating feat DaBaby', 'Dua Lipa Levitating']);
   assert.ok(library.calls.every((call) => call.options.strict === true && call.options.limit === 1 && call.options.exclude === exclude));
+});
+
+test('findLocalMatch exige todas las palabras y solo después tolera una sin coincidencia', () => {
+  const track = { source: 'local', localId: 'a'.repeat(24), title: 'Levitating', artist: 'Dua Lipa' };
+  const library = {
+    status: () => ({ count: 5 }),
+    calls: [],
+    search(query, options) {
+      this.calls.push(options.allowMissing);
+      return { items: options.allowMissing === 1 ? [track] : [], total: 0 };
+    },
+  };
+
+  assert.equal(findLocalMatch({ library, title: 'Dua Lipa - Levitating Extra' }), track);
+  assert.deepEqual(library.calls, [0, 1]);
+
+  // una palabra tolerada por cada 4 de la consulta: con 8 palabras, dos
+  library.calls.length = 0;
+  findLocalMatch({ library, title: 'uno dos tres cuatro cinco seis siete ocho' });
+  assert.deepEqual(library.calls, [0, 2]);
 });
 
 test('findLocalMatch devuelve null sin biblioteca, con la biblioteca vacía o sin coincidencia', () => {

@@ -368,6 +368,40 @@ test('la búsqueda ordena por relevancia: título, luego artista y luego notas',
   }
 });
 
+test('las combinaciones de 2 y 3 palabras seguidas suben la puntuación sin ser obligatorias', async () => {
+  const tags = {
+    'archivo-a.mp3': { title: 'Give Up Never', artist: 'Uno', album: null, notes: [], duration: null },
+    'archivo-b.mp3': { title: 'Never Give Up', artist: 'Dos', album: null, notes: [], duration: null },
+    'archivo-c.mp3': { title: 'Canción', artist: 'Never', album: null, notes: ['give up'], duration: null },
+  };
+  const { root, cleanup } = await makeFilesDir(Object.keys(tags));
+  try {
+    const library = await openLibrary(root, { readTags: fakeReader(tags) });
+
+    const titles = library.search('never give up').items.map((track) => track.title);
+    assert.deepEqual(titles, ['Never Give Up', 'Give Up Never', 'Canción']);
+  } finally {
+    await cleanup();
+  }
+});
+
+test('allowMissing tolera palabras sin coincidencia si al menos dos coinciden y las deja detrás', async () => {
+  const { root, cleanup } = await makeFilesDir(Object.keys(FAKE_TAGS));
+  try {
+    const library = await openLibrary(root, { readTags: fakeReader(FAKE_TAGS) });
+    const titles = (query, options) => library.search(query, options).items.map((track) => track.title);
+
+    assert.deepEqual(titles('rick astley gonna sub'), []);
+    assert.deepEqual(titles('rick astley gonna sub', { allowMissing: 1 }), ['Never Gonna Give You Up']);
+    assert.deepEqual(titles('rick sub', { allowMissing: 1 }), []); // solo coincide una palabra
+    assert.deepEqual(titles('rick astley sub otro', { allowMissing: 1 }), []); // faltan dos
+    // con el modo estricto sigue haciendo falta respaldo del artista o el álbum
+    assert.deepEqual(titles('gonna give sub', { allowMissing: 1, strict: true }), ['Never Gonna Give You Up']);
+  } finally {
+    await cleanup();
+  }
+});
+
 test('las etiquetas solo se vuelven a leer en los archivos nuevos o modificados', async () => {
   const { root, cleanup } = await makeFilesDir(Object.keys(FAKE_TAGS));
   try {

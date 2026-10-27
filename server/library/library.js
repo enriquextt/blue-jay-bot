@@ -23,6 +23,15 @@ const PREFIX_TITLE_BONUS = 2;
 const fold = (text) => text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
 // Plan B cuando el archivo no tiene etiquetas: "Artista - Título.mp3", o la carpeta como artista.
+// Combinaciones de 2 y 3 palabras consecutivas de la búsqueda: «a b c d» → «a b», «b c», «c d», «a b c», «b c d».
+function wordCombinations(terms) {
+  const phrases = [];
+  for (const size of [2, 3]) {
+    for (let i = 0; i + size <= terms.length; i++) phrases.push(terms.slice(i, i + size).join(' '));
+  }
+  return phrases;
+}
+
 function describe(relPath) {
   const parts = relPath.split('/');
   const name = parse(parts.at(-1)).name.replace(/_/g, ' ').trim();
@@ -309,14 +318,17 @@ export class Library extends EventEmitter {
   // Con `strict`, una palabra que solo aparece en textos de menos de 10 caracteres (un título corto, una
   // nota corta o el nombre del archivo) no vale por sí sola: hace falta que otra palabra de la búsqueda
   // coincida con el artista o el álbum. Evita que «love» encuentre cualquier canción que se llame «Love».
-  search(query, { limit = 50, exclude = () => false, strict = false } = {}) {
+  //
+  // Con `allowMissing`, la pista no se descarta si faltan hasta esa cantidad de palabras, siempre que
+  // coincidan al menos dos. Las que faltan no suman, así que quedan detrás de las que coinciden entera.
+  search(query, { limit = 50, exclude = () => false, strict = false, allowMissing = 0 } = {}) {
     const text = fold(String(query ?? '')).trim();
     const terms = text.split(/\s+/).filter(Boolean);
-
+    const phrases = wordCombinations(terms);
     let matches = this.#tracks.filter((track) => !exclude(publicView(track)));
     if (terms.length > 0) {
       matches = matches
-        .map((track) => ({ track, score: Library.#score(track, text, terms, strict) }))
+        .map((track) => ({ track, score: Library.#score(track, text, terms, phrases, strict, allowMissing) }))
         .filter(({ score }) => score > 0)
         .sort((a, b) => b.score - a.score) // estable: a igual puntuación se conserva el orden alfabético
         .map(({ track }) => track);
@@ -324,13 +336,12 @@ export class Library extends EventEmitter {
     return { items: matches.slice(0, limit).map(publicView), total: matches.length };
   }
 
-  static #score({ fields }, text, terms, strict) {
+  static #score({ fields }, text, terms, phrases, strict, allowMissing) {
     const matches = terms.map((term) => {
       const inArtist = fields.artist.includes(term);
       const inAlbum = fields.album.includes(term);
       let weight = Math.max(inArtist ? WEIGHT.artist : 0, inAlbum ? WEIGHT.album : 0);
       let standsAlone = inArtist || inAlbum;
-
       for (const { text: value, weight: textWeight, isTag } of fields.texts) {
         if (!value.includes(term)) continue;
         weight = Math.max(weight, textWeight);
@@ -339,13 +350,22 @@ export class Library extends EventEmitter {
       return { weight, standsAlone, inArtistOrAlbum: inArtist || inAlbum };
     });
 
-    if (matches.some(({ weight }) => weight === 0)) return 0;
+    const found = matches.filter(({ weight }) => weight > 0);
+    const missing = matches.length - found.length;
+    if (missing > allowMissing || (missing > 0 && found.length < 2)) return 0;
     if (strict) {
-      const backed = matches.some(({ inArtistOrAlbum }) => inArtistOrAlbum);
-      if (!backed && matches.some(({ standsAlone }) => !standsAlone)) return 0;
+      const backed = found.some(({ inArtistOrAlbum }) => inArtistOrAlbum);
+      if (!backed && found.some(({ standsAlone }) => !standsAlone)) return 0;
     }
 
-    let score = matches.reduce((sum, { weight }) => sum + weight, 0);
+    let score = found.reduce((sum, { weight }) => sum + weight, 0);
+    // Las combinaciones de 2 y 3 palabras seguidas no son obligatorias (el artista y el título pueden estar en
+    // campos distintos), pero si aparecen juntas en un mismo campo suman su peso.
+    for (const phrase of phrases) {
+      const inArtistOrAlbum = [fields.artist.includes(phrase) && WEIGHT.artist, fields.album.includes(phrase) && WEIGHT.album];
+      const inTexts = fields.texts.filter(({ text: value }) => value.includes(phrase)).map(({ weight }) => weight);
+      score += Math.max(0, ...inArtistOrAlbum, ...inTexts);
+    }
     if (fields.title === text) score += EXACT_TITLE_BONUS;
     else if (fields.title.startsWith(text)) score += PREFIX_TITLE_BONUS;
     return score;
