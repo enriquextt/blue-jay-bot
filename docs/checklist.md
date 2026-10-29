@@ -63,7 +63,7 @@ Leyenda de la columna de decisión:
 - [x] Historial de reproducción — **Mantener** (requerimiento nuevo, fase 5). Cada canción que empieza a sonar, con su origen (petición o lista base) y quién la pidió
 - [x] Búsqueda y filtros por usuario y por fecha — **Mantener**. También por resultado en el historial de peticiones
 - [x] Borrar una entrada o limpiar todo el historial — **Mantener** (requerimiento nuevo, fase 5). Cada historial se limpia por separado; cada uno guarda como máximo 10.000 filas
-- [ ] Marcar favoritos en el historial — **Mantener**
+- [ ] Marcar favoritos en el historial — **Mantener**. Descartado en la fase 5: para guardar una canción del historial se usan las listas de reproducción (ver `docs/propuesta.md`)
 - [x] Volver a añadir una canción del historial a la cola — **Mantener**
 - [x] Guardar una canción del historial en una lista de reproducción — **Mantener** (requerimiento nuevo, fase 5)
 
@@ -81,17 +81,17 @@ Leyenda de la columna de decisión:
 ## 7. Panel de control de la lista de reproducción (nuevo)
 
 - [x] Ver cola, lista base e historial en un único panel — **Mantener** (requerimiento nuevo). Pestañas Cola, Lista base, Biblioteca local, Historial, Listas, Lista negra y Ajustes
-- [ ] Reordenar, eliminar y saltar pistas desde el panel — **Mantener** (requerimiento nuevo)
+- [ ] Reordenar, eliminar y saltar pistas desde el panel — **Mantener** (requerimiento nuevo). Asignado a la fase 7
 - [x] Gestionar listas base (añadir, quitar, activar) — **Mantener** (requerimiento nuevo). La lista base es única (ver `docs/propuesta.md`, 3.5)
 - [x] Listas de reproducción propias: crear, renombrar y eliminar — **Mantener** (requerimiento nuevo, fase 5). Hasta 100 listas de 2.000 pistas, sin repetir pistas dentro de una lista; se guardan en SQLite
 - [x] Añadir a la cola una canción o toda una lista de reproducción — **Mantener** (requerimiento nuevo, fase 5). Se saltan las pistas vetadas o que ya no están en la biblioteca
-- [ ] Controles de reproducción: play, pausa, siguiente, aleatorio — **Mantener** (requerimiento nuevo)
+- [ ] Controles de reproducción: play, pausa, siguiente, aleatorio — **Mantener** (requerimiento nuevo). Asignado a la fase 7
 - [x] Ver el estado en vivo de la cola y de la canción actual — **Mantener** (requerimiento nuevo)
 - [x] Panel en dos columnas — **Mantener** (requerimiento nuevo, fase 5.5). A la izquierda (1/3) «Sonando ahora», con favorito, vetar y siguiente en una sola fila arriba, «Añadir canción» y «Cola»; a la derecha (2/3) el resto de pestañas. En pantallas estrechas se apilan
 
 ## 8. Widget de OBS
 
-- [ ] Widget compacto con título y progreso de la canción actual — **Adaptar** (hoy usa el WebSocket de Streamer.bot)
+- [ ] Widget compacto con título y progreso de la canción actual — **Adaptar** (el original usa el WebSocket de Streamer.bot; aquí lo sirve el WebSocket propio del servidor)
 - [ ] Actualización en vivo mediante WebSocket — **Mantener**
 - [ ] Audio opcional del widget (solo YouTube) — **Opcional**
 - [ ] Editor visual: mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento — **Opcional**

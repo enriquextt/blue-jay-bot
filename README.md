@@ -6,7 +6,7 @@ Servidor local de **peticiones de canciones para directos**. Los viewers piden m
 
 Funciona en tu propio equipo: los datos, las claves de API y la música no salen de él. Está escrito en Node.js, con interfaz en español e inglés.
 
-> **Estado: en desarrollo.** Las fases 0 a 4.5 están terminadas (cola, chat de Twitch, lista base, biblioteca local y etiquetas). Faltan límites e historial, persistencia de la cola, el widget de OBS y las herramientas de operación. Mira [Estado y hoja de ruta](#estado-y-hoja-de-ruta).
+> **Estado: en desarrollo.** Las fases 0 a 5.5 están terminadas (cola, chat de Twitch, lista base, biblioteca local, etiquetas, límites, historial, persistencia de la cola y mensajes del bot editables). Faltan el widget de OBS y las herramientas de operación. Mira [Estado y hoja de ruta](#estado-y-hoja-de-ruta).
 
 ## Qué hace hoy
 
@@ -162,15 +162,15 @@ data/       Datos locales y credenciales (ignorado por git)
 | 4 | Biblioteca local | Hecha |
 | 4.5 | Etiquetas, `!local` y búsqueda por comentario y descripción | Hecha |
 | 5 | Límites por usuario y global, historial, listas de reproducción y persistencia de la cola | Hecha |
+| 5.5 | Mensajes del bot editables y panel en dos columnas | Hecha |
 | 6 | Widget de OBS | Pendiente |
-| 7 | Diagnóstico y exportar/importar ajustes | Pendiente |
+| 7 | Diagnóstico, exportar/importar ajustes y controles de reproducción en el panel | Pendiente |
 | 8 | Opcionales: Spotify, editor del widget, chat de Kick y YouTube | Pendiente |
 
 **Limitaciones actuales**
 
 - Al reiniciar, la canción que sonaba vuelve a empezar desde el principio cuando abres el panel.
 - Solo hay adaptador de chat para Twitch.
-- Los mensajes del bot en el chat no se pueden editar desde el panel.
 - Todavía no hay widget para OBS. Para mostrar o capturar el audio hay que usar la pestaña del panel.
 - El título y el artista no se pueden editar desde el panel; salen de las etiquetas del archivo.
 
