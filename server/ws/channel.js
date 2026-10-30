@@ -10,6 +10,9 @@ const MAX_ID_LENGTH = 64;
 const MAX_VOLUME = 100;
 const MAX_PATH_LENGTH = 1024;
 const MAX_QUERY_LENGTH = 100;
+const MAX_SECONDS = 24 * 60 * 60;
+const WIDGET_TEST_SECONDS = 8;
+const WIDGET_SHOW_SECONDS = 10;
 const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
 export function createChannel({
@@ -32,6 +35,9 @@ export function createChannel({
   onStateChange = () => {},
 }) {
   const clients = new Set();
+  // Widgets de OBS (`/ws?view=widget`): solo leen el estado de reproducción, nunca mandan órdenes.
+  const widgets = new Set();
+  let progress = null;
 
   function send(socket, message) {
     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -44,8 +50,33 @@ export function createChannel({
     }
   }
 
+  function broadcastWidgets(message) {
+    const payload = JSON.stringify(message);
+    for (const socket of widgets) {
+      if (socket.readyState === WebSocket.OPEN) socket.send(payload);
+    }
+  }
+
+  // Hace visible el widget unos segundos (lo piden los comandos `!queue` y `!song`).
+  function showWidget() {
+    broadcastWidgets({ type: 'widget.show', data: { seconds: WIDGET_SHOW_SECONDS } });
+  }
+
+  // Lo que ve el widget de la canción actual: nada que no deba verse en directo (ni rutas ni ids internos).
+  function widgetState() {
+    const { current } = getState();
+    if (!current) return { current: null };
+
+    const requestedBy = current.requestedBy?.slice(current.requestedBy.indexOf(':') + 1) || null;
+    return { current: { id: current.id, title: current.title, artist: current.artist ?? null, requestedBy } };
+  }
+
   function broadcastState() {
-    broadcast({ type: 'state', data: getState() });
+    const state = getState();
+    broadcast({ type: 'state', data: state });
+    // Al cambiar de canción el progreso anterior ya no vale.
+    if (progress && progress.id !== state.current?.id) progress = null;
+    broadcastWidgets({ type: 'state', data: widgetState() });
     onStateChange();
   }
 
@@ -164,6 +195,11 @@ export function createChannel({
     return typeof value === 'string' && value.length > 0 && value.length <= MAX_ID_LENGTH;
   }
 
+  // Segundos: un número finito entre 0 y un día (los directos de YouTube pueden no tener fin definido).
+  function isTime(value) {
+    return Number.isFinite(value) && value >= 0 && value <= MAX_SECONDS;
+  }
+
   const collectionCommands = createCollectionCommands({
     queue,
     library,
@@ -221,6 +257,23 @@ export function createChannel({
         }
         queue.setVolume(command.volume);
         return broadcastState();
+      }
+
+      case 'playback.progress': {
+        const { id, position, duration, paused } = command;
+        if (!isId(id) || !isTime(position) || !isTime(duration) || typeof paused !== 'boolean') {
+          return sendError(socket, 'errors.invalidMessage');
+        }
+
+        // Solo vale el progreso de la canción que suena: un panel atrasado no pisa al otro.
+        if (queue.snapshot().current?.id !== id) return;
+        progress = { id, position: Math.min(position, duration), duration, paused };
+        return broadcastWidgets({ type: 'progress', data: progress });
+      }
+
+      case 'widget.test': {
+        // Tarjeta de prueba: solo la ve el widget y no toca la cola ni el historial.
+        return broadcastWidgets({ type: 'widget.test', data: { duration: WIDGET_TEST_SECONDS } });
       }
 
       case 'playback.ended': {
@@ -375,6 +428,14 @@ export function createChannel({
   }
 
   wss.on('connection', (socket, request) => {
+    if (new URL(request.url, 'http://localhost').searchParams.get('view') === 'widget') {
+      widgets.add(socket);
+      send(socket, { type: 'state', data: widgetState() });
+      if (progress) send(socket, { type: 'progress', data: progress });
+      socket.on('close', () => widgets.delete(socket));
+      return;
+    }
+
     const isLocal = LOOPBACK_ADDRESSES.has(request.socket.remoteAddress);
     clients.add(socket);
     send(socket, { type: 'state', data: getState() });
@@ -399,5 +460,5 @@ export function createChannel({
     socket.on('close', () => clients.delete(socket));
   });
 
-  return { broadcastState };
+  return { broadcastState, showWidget };
 }

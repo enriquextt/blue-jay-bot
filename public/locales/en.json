@@ -70,12 +70,22 @@
       "searchFailed": "@{{user}}, the song could not be searched right now. Try a link.",
       "banned": "@{{user}}, that song is banned.",
       "unavailable": "@{{user}}, “{{title}}” exists but cannot be played here and I found no version in the local library.",
-      "replaced": "@{{user}}, “{{original}}” cannot be played here; the local version “{{title}}” plays instead."
+      "replaced": "@{{user}}, “{{original}}” cannot be played here; the local version “{{title}}” plays instead.",
+      "tooLong": "@{{user}}, “{{title}}” is longer than {{minutes}} minutes, which is the maximum allowed.",
+      "live": "@{{user}}, “{{title}}” is a live stream and live streams are not accepted."
     },
     "queue": {
       "empty": "Nothing is playing and the queue is empty.",
       "onlyCurrent": "Now playing: {{current}}. No more songs in the queue.",
       "summary": "Now playing: {{current}}. Up next: {{next}}"
+    },
+    "song": {
+      "none": "Nothing is playing.",
+      "playing": "Now playing: {{title}}.",
+      "details": "Now playing: {{title}} · {{details}}",
+      "artist": "Artist: {{artist}}",
+      "album": "Album: {{album}}",
+      "note": "Note: {{note}}"
     },
     "when": {
       "none": "@{{user}}, you have no pending songs.",
@@ -176,7 +186,22 @@
     "globalLimit": "In total",
     "local": "Local library",
     "localFallback": "Replace videos that cannot be played with their local version",
-    "localFallbackHelp": "If a YouTube link exists but cannot be played here, its title is looked up in the local library and that track plays instead; with no clear match, the request is rejected or skipped. The YouTube key is needed to warn before queueing."
+    "maxDuration": "Maximum YouTube video length",
+    "maxDurationHelp": "Videos requested from chat that run longer are rejected, and so are live streams. The YouTube key is needed. Local tracks are not affected.",
+    "maxDurationMinutes": "minutes",
+    "localFallbackHelp": "If a YouTube link exists but cannot be played here, its title is looked up in the local library and that track plays instead; with no clear match, the request is rejected or skipped. The YouTube key is needed to warn before queueing.",
+    "widget": "OBS widget",
+    "widgetHelp": "Add this address in OBS as a browser source (for example, 600 × 160). The background is transparent and it updates by itself. It stays invisible until someone types !queue or !song, or the track changes (10 s); add ?idle=0.3 to keep it semi-transparent. With the panel closed the widget shows no progress: the player lives in this tab.",
+    "widgetUrl": "Widget address",
+    "widgetCopy": "Copy",
+    "widgetCopied": "Address copied.",
+    "widgetCopyFailed": "Could not copy: select the address and copy it by hand.",
+    "widgetTest": "Send test card"
+  },
+  "widget": {
+    "requestedBy": "requested by {{user}}",
+    "testTitle": "Test song",
+    "testArtist": "Blue Jay Bot"
   },
   "history": {
     "title": "History",
@@ -219,7 +244,9 @@
       "limit_user": "User limit",
       "limit_global": "Global limit",
       "replaced": "Replaced by local",
-      "unavailable": "Not playable"
+      "unavailable": "Not playable",
+      "too_long": "Too long",
+      "live": "Live stream"
     }
   },
   "playlists": {

@@ -326,10 +326,16 @@ test('con etiquetas reales, mandan sobre el nombre del archivo y la búsqueda us
       assert.equal(library.search(query).items[0]?.localId, rick.localId, query);
     }
 
+    const tags = library.tags(rick.localId);
+    assert.equal(tags.album.toLowerCase().includes('whenever'), true);
+    assert.equal(tags.notes.length > 0, true);
+
     // El archivo ilegible se queda con los datos de su nombre y duración desconocida.
     const plain = library.search('otra cosa').items[0];
     assert.equal(plain.artist, 'Sin etiquetas');
     assert.equal(plain.duration, null);
+    assert.deepEqual(library.tags(plain.localId), { album: null, notes: [] });
+    assert.equal(library.tags('no-existe'), null);
     assert.equal(library.status().status, 'ready');
   } finally {
     await cleanup();

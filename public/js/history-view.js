@@ -16,6 +16,8 @@ const OUTCOMES = [
   'disabled',
   'limit_user',
   'limit_global',
+  'too_long',
+  'live',
 ];
 // Qué resultados se destacan en rojo (algo falló) o en ámbar (se rechazó); el resto es normal.
 const OUTCOME_TONE = { accepted: 'ok', replaced: 'ok', invalid_url: 'error', search_failed: 'error' };

@@ -216,6 +216,16 @@
         </label>
         <p class="empty" data-i18n="settings.localFallbackHelp">Si un enlace de YouTube existe pero no se puede reproducir aquí, se busca su título en la biblioteca local y suena esa pista; si no hay una coincidencia clara, la petición se rechaza o se salta. Para avisar antes de encolar hace falta la clave de YouTube.</p>
 
+        <h3 class="section-title" data-i18n="settings.maxDuration">Duración máxima de los vídeos de YouTube</h3>
+        <p class="empty" data-i18n="settings.maxDurationHelp"></p>
+        <div class="limit-row">
+          <label class="check">
+            <input id="duration-enabled" type="checkbox">
+            <span data-i18n="settings.maxDurationMinutes">minutos</span>
+          </label>
+          <input id="duration-minutes" class="number" type="number" min="1" max="600" step="1" data-i18n-aria-label="settings.maxDuration">
+        </div>
+
         <h3 class="section-title" data-i18n="settings.limits">Límites de peticiones activas</h3>
         <p class="empty" data-i18n="settings.limitsHelp">Cuentan las canciones pedidas por el chat que están sonando o esperando en la cola.</p>
         <div class="limit-row">
@@ -232,6 +242,16 @@
           </label>
           <input id="limit-global-max" class="number" type="number" min="1" max="1000" step="1" data-i18n-aria-label="settings.globalLimit">
         </div>
+
+        <h3 class="section-title" data-i18n="settings.widget">Widget de OBS</h3>
+        <p class="empty" data-i18n="settings.widgetHelp"></p>
+        <div class="add-form">
+          <input id="widget-url" type="text" readonly data-i18n-aria-label="settings.widgetUrl">
+          <button id="widget-copy" class="secondary" type="button" data-i18n="settings.widgetCopy">Copiar</button>
+        </div>
+        <p class="widget-actions">
+          <button id="widget-test" class="secondary" type="button" data-i18n="settings.widgetTest">Enviar tarjeta de prueba</button>
+        </p>
       </div>
     </section>
     </div>

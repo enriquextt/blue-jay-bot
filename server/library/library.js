@@ -310,6 +310,13 @@ export class Library extends EventEmitter {
     return track ? publicView(track) : null;
   }
 
+  // Etiquetas de una pista (álbum y notas, que el índice público no incluye), o null si no se leyeron.
+  tags(id) {
+    const track = this.#byId.get(id);
+    const tags = track && this.#tagCache.get(track.relPath)?.tags;
+    return tags ? { album: tags.album ?? null, notes: tags.notes ?? [] } : null;
+  }
+
   // Busca por título, artista, álbum, comentarios, descripciones y nombre de archivo, sin distinguir
   // mayúsculas ni acentos. Todos los términos deben aparecer, cada uno en cualquier campo. Con texto,
   // las coincidencias en el título van antes que las del artista y estas antes que las de las notas.

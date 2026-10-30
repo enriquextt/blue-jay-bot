@@ -5,12 +5,13 @@ import { parseVideoId } from '../youtube/youtube.js';
 const PREFIX = '!';
 const QUEUE_PREVIEW_SIZE = 10;
 const TITLE_PREVIEW_LENGTH = 40;
+const NOTE_PREVIEW_LENGTH = 120;
 const MAX_VOLUME = 100;
 const MAX_SEARCH_LENGTH = 100;
 const LINK_PATTERN = /^https?:\/\//i;
 
-function preview(title) {
-  return title.length > TITLE_PREVIEW_LENGTH ? `${title.slice(0, TITLE_PREVIEW_LENGTH - 1)}…` : title;
+function preview(title, maxLength = TITLE_PREVIEW_LENGTH) {
+  return title.length > maxLength ? `${title.slice(0, maxLength - 1)}…` : title;
 }
 
 export function createCommands({
@@ -24,6 +25,7 @@ export function createCommands({
   history = null,
   t,
   onChange,
+  onShowWidget = () => {},
   voteSkipThreshold = 3,
 }) {
   let votes = { trackId: null, voters: new Set() };
@@ -92,12 +94,17 @@ export function createCommands({
     return t('chat.sr.added', { user, title, position: pending.findIndex((item) => item.id === track.id) + 1 });
   }
 
-  // Con la clave de YouTube, mira antes de encolar si el vídeo se puede reproducir aquí. Si existe pero no se
-  // puede incrustar, lo sustituye por la pista de la biblioteca que coincida con su título o rechaza la petición.
+  // Con la clave de YouTube, mira antes de encolar los datos del vídeo. Con el máximo de Ajustes activado,
+  // rechaza los directos y los vídeos que duran más. Con `checkEmbeddable` (enlaces, no resultados de búsqueda), si existe pero no se puede
+  // incrustar, lo sustituye por la pista de la biblioteca que coincida con su título o rechaza la petición.
   // Devuelve la respuesta del chat (null si ese mensaje está desactivado) o undefined si hay que seguir como
   // siempre, incluida una API caída.
-  async function checkPlayable(request, videoId) {
-    if (!getVideoInfo || !settings?.get().localFallback) return undefined;
+  async function checkVideo(request, videoId, { checkEmbeddable }) {
+    if (!getVideoInfo || !settings) return undefined;
+
+    const { localFallback, maxDuration } = settings.get();
+    const limitDuration = maxDuration.enabled;
+    if (!limitDuration && !(checkEmbeddable && localFallback)) return undefined;
 
     let info;
     try {
@@ -105,7 +112,14 @@ export function createCommands({
     } catch {
       return undefined;
     }
-    if (!info || info.embeddable) return undefined;
+    if (!info) return undefined;
+
+    // Un directo no tiene fin: no cabe en ninguna duración máxima.
+    if (limitDuration && info.live) return reject(request, 'live', 'chat.sr.live', { title: info.title });
+    if (limitDuration && info.duration > maxDuration.minutes * 60) {
+      return reject(request, 'too_long', 'chat.sr.tooLong', { title: info.title, minutes: maxDuration.minutes });
+    }
+    if (info.embeddable || !checkEmbeddable || !localFallback) return undefined;
 
     const match = findLocalMatch({ library, title: info.title, exclude: (track) => blacklist?.has(track) ?? false });
     if (!match) return reject(request, 'unavailable', 'chat.sr.unavailable', { title: info.title });
@@ -145,10 +159,8 @@ export function createCommands({
 
     if (blacklist?.has({ videoId })) return reject(request, 'banned', 'chat.sr.banned');
 
-    if (isLink) {
-      const reply = await checkPlayable(request, videoId);
-      if (reply !== undefined) return reply;
-    }
+    const reply = await checkVideo(request, videoId, { checkEmbeddable: isLink });
+    if (reply !== undefined) return reply;
 
     const title = (await fetchTitle(videoId)) ?? videoId;
     return enqueue(request, { videoId, title });
@@ -170,7 +182,26 @@ export function createCommands({
     return enqueue(request, found);
   }
 
+  // Información de la canción que suena. En las pistas locales añade las etiquetas del archivo.
+  function song() {
+    const { current } = queue.snapshot();
+    onShowWidget();
+    if (!current) return t('chat.song.none');
+
+    const tags = current.source === 'local' ? library?.tags(current.localId) : null;
+    const note = tags?.notes[0];
+    const details = [
+      current.artist && t('chat.song.artist', { artist: current.artist }),
+      tags?.album && t('chat.song.album', { album: tags.album }),
+      note && t('chat.song.note', { note: preview(note, NOTE_PREVIEW_LENGTH) }),
+    ].filter(Boolean);
+
+    if (details.length === 0) return t('chat.song.playing', { title: current.title });
+    return t('chat.song.details', { title: current.title, details: details.join(' · ') });
+  }
+
   function showQueue() {
+    onShowWidget();
     const { current, queue: pending } = queue.snapshot();
     if (!current) return t('chat.queue.empty');
 
@@ -251,6 +282,7 @@ export function createCommands({
     sr,
     local,
     queue: showQueue,
+    song,
     when,
     skip,
     voteskip: voteSkip,

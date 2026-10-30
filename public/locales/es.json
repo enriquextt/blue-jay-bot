@@ -70,12 +70,22 @@
       "searchFailed": "@{{user}}, no se pudo buscar la canción ahora mismo. Prueba con un enlace.",
       "banned": "@{{user}}, esa canción está vetada.",
       "unavailable": "@{{user}}, «{{title}}» existe pero no se puede reproducir aquí y no encontré una versión en la biblioteca local.",
-      "replaced": "@{{user}}, «{{original}}» no se puede reproducir aquí; suena la versión local «{{title}}»."
+      "replaced": "@{{user}}, «{{original}}» no se puede reproducir aquí; suena la versión local «{{title}}».",
+      "tooLong": "@{{user}}, «{{title}}» dura más de {{minutes}} minutos, que es el máximo permitido.",
+      "live": "@{{user}}, «{{title}}» es un directo y no se admiten directos."
     },
     "queue": {
       "empty": "No hay nada sonando ni en la cola.",
       "onlyCurrent": "Suena: {{current}}. No hay más canciones en la cola.",
       "summary": "Suena: {{current}}. Siguientes: {{next}}"
+    },
+    "song": {
+      "none": "No hay nada sonando.",
+      "playing": "Suena: {{title}}.",
+      "details": "Suena: {{title}} · {{details}}",
+      "artist": "Artista: {{artist}}",
+      "album": "Álbum: {{album}}",
+      "note": "Nota: {{note}}"
     },
     "when": {
       "none": "@{{user}}, no tienes ninguna canción pendiente.",
@@ -176,7 +186,22 @@
     "globalLimit": "En total",
     "local": "Biblioteca local",
     "localFallback": "Sustituir los vídeos que no se pueden reproducir por su versión local",
-    "localFallbackHelp": "Si un enlace de YouTube existe pero no se puede reproducir aquí, se busca su título en la biblioteca local y suena esa pista; si no hay una coincidencia clara, la petición se rechaza o se salta. Para avisar antes de encolar hace falta la clave de YouTube."
+    "maxDuration": "Duración máxima de los vídeos de YouTube",
+    "maxDurationHelp": "Los vídeos pedidos por el chat que duren más se rechazan, igual que los directos. Hace falta la clave de YouTube. No afecta a las pistas locales.",
+    "maxDurationMinutes": "minutos",
+    "localFallbackHelp": "Si un enlace de YouTube existe pero no se puede reproducir aquí, se busca su título en la biblioteca local y suena esa pista; si no hay una coincidencia clara, la petición se rechaza o se salta. Para avisar antes de encolar hace falta la clave de YouTube.",
+    "widget": "Widget de OBS",
+    "widgetHelp": "Añade esta dirección en OBS como fuente de navegador (por ejemplo, 600 × 160). El fondo es transparente y se actualiza solo. Es invisible hasta que alguien escribe !queue o !song, o cambia la pista (10 s); añade ?idle=0.3 para dejarlo semitransparente. Con el panel cerrado el widget no muestra el progreso: el reproductor vive en esta pestaña.",
+    "widgetUrl": "Dirección del widget",
+    "widgetCopy": "Copiar",
+    "widgetCopied": "Dirección copiada.",
+    "widgetCopyFailed": "No se pudo copiar: selecciona la dirección y cópiala a mano.",
+    "widgetTest": "Enviar tarjeta de prueba"
+  },
+  "widget": {
+    "requestedBy": "pedida por {{user}}",
+    "testTitle": "Canción de prueba",
+    "testArtist": "Blue Jay Bot"
   },
   "history": {
     "title": "Historial",
@@ -219,7 +244,9 @@
       "limit_user": "Límite de usuario",
       "limit_global": "Límite global",
       "replaced": "Sustituida por local",
-      "unavailable": "No reproducible"
+      "unavailable": "No reproducible",
+      "too_long": "Demasiado larga",
+      "live": "Directo"
     }
   },
   "playlists": {

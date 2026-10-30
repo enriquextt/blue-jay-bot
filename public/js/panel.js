@@ -9,6 +9,7 @@ import { createPlaylistsView } from './playlists-view.js';
 import { createSettingsView } from './settings-view.js';
 
 const RECONNECT_DELAY_MS = 2000;
+const PROGRESS_INTERVAL_MS = 1000;
 const NOTICE_DURATION_MS = 4000;
 const VOLUME_SEND_INTERVAL_MS = 100;
 const SEARCH_DEBOUNCE_MS = 250;
@@ -327,6 +328,16 @@ function syncPlayer() {
   }
 }
 
+// El progreso solo lo conoce el reproductor de este panel: se lo pasa al servidor para el widget de OBS.
+function reportProgress() {
+  if (!loadedId) return;
+
+  const active = state.current?.source === 'local' ? localPlayer : player;
+  const progress = active?.progress();
+  if (!progress || !Number.isFinite(progress.position) || !Number.isFinite(progress.duration)) return;
+  send({ type: 'playback.progress', id: loadedId, ...progress });
+}
+
 function handleMessage(message) {
   for (const view of views) view.handleMessage(message);
 
@@ -507,7 +518,7 @@ function setupSortable() {
 async function start() {
   await initI18n();
   views.push(
-    createSettingsView({ send }),
+    createSettingsView({ send, showNotice }),
     createHistoryView({ send }),
     createPlaylistsView({ send }),
     createMessagesView({ send }),
@@ -523,6 +534,7 @@ async function start() {
   renderLibrary();
   for (const view of views) view.render();
   connect();
+  setInterval(reportProgress, PROGRESS_INTERVAL_MS);
 
   localPlayer = createLocalPlayer({
     element: elements.localAudio,

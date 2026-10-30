@@ -429,6 +429,10 @@ button[aria-pressed="true"] {
   margin-top: 8px;
 }
 
+.widget-actions {
+  margin: 12px 0 0;
+}
+
 input.number {
   flex: none;
   width: 6.5em;

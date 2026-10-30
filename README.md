@@ -6,19 +6,19 @@ Servidor local de **peticiones de canciones para directos**. Los viewers piden m
 
 Funciona en tu propio equipo: los datos, las claves de API y la música no salen de él. Está escrito en Node.js, con interfaz en español e inglés.
 
-> **Estado: en desarrollo.** Las fases 0 a 5.5 están terminadas (cola, chat de Twitch, lista base, biblioteca local, etiquetas, límites, historial, persistencia de la cola y mensajes del bot editables). Faltan el widget de OBS y las herramientas de operación. Mira [Estado y hoja de ruta](#estado-y-hoja-de-ruta).
+> **Estado: en desarrollo.** Las fases 0 a 6 están terminadas (cola, chat de Twitch, lista base, biblioteca local, etiquetas, límites, historial, persistencia de la cola, mensajes del bot editables y widget de OBS). Faltan las herramientas de operación. Mira [Estado y hoja de ruta](#estado-y-hoja-de-ruta).
 
 ## Qué hace hoy
 
 - **Cola de peticiones** con arrastrar y soltar, saltar canción, volumen y salto automático de vídeos no disponibles.
-- **Chat de Twitch** con `!sr`, `!local`, `!queue`, `!when`, `!voteskip`, `!wrongsong`, `!skip` y `!volume`. Las respuestas salen en el idioma configurado.
+- **Chat de Twitch** con `!sr`, `!local`, `!queue`, `!song`, `!when`, `!voteskip`, `!wrongsong`, `!skip` y `!volume`. Las respuestas salen en el idioma configurado.
 - **Lista base** que suena cuando la cola se queda vacía: botones START (en orden) y SHUFFLE (aleatorio), playlists de YouTube, favoritos que van primero y lista negra con un clic.
 - **Biblioteca local**: eliges una carpeta de música, se escanea y se mantiene al día. Se busca por título, artista, álbum, comentario o descripción, y se reproduce desde el propio panel.
 - **Etiquetas de audio** (ID3, Vorbis, MP4…): título, artista, álbum, duración y notas. Un comentario o una descripción pueden servir de título alternativo.
 - **Vídeos que no se pueden reproducir**: si alguien pide un enlace de YouTube que existe pero no se puede incrustar o reproducir, el bot busca su título en tu biblioteca local y pone esa pista (o rechaza la petición si no hay una coincidencia clara). Se puede desactivar en Ajustes.
 - **Historial** de las peticiones del chat (con su resultado: aceptada, URL no válida, vetada, límite…) y de las canciones reproducidas, con filtros por usuario y fecha y opción de borrar o limpiar.
 - **Listas de reproducción propias**: se crean, se llenan desde el historial o con la cola actual y se añaden a la cola, canción a canción o enteras.
-- **Límites y control del chat**: máximo de peticiones activas por usuario y en total, y un interruptor para dejar de aceptar `!sr` y `!local`.
+- **Límites y control del chat**: máximo de peticiones activas por usuario y en total, duración máxima de los vídeos de YouTube (7 minutos por defecto, con la clave de YouTube) y un interruptor para dejar de aceptar `!sr` y `!local`.
 - **Persistencia**: la cola, la canción actual, el volumen y el estado START/SHUFFLE sobreviven a un reinicio (SQLite).
 - **Mensajes del bot editables**: reescribe lo que responde el bot en cada idioma, con vista previa, y activa o desactiva cada mensaje sin perder su texto.
 - **Panel en dos columnas**: a la izquierda lo que suena, añadir canción y la cola; a la derecha las pestañas (Lista base, Biblioteca local, Historial, Listas, Lista negra, Mensajes, Ajustes). Iconos propios y cambio de idioma al vuelo.
@@ -116,7 +116,8 @@ La petición de un viewer no interrumpe la canción de la lista base que está s
 |---|---|---|
 | `!sr <enlace, ID o texto>` | Todos | Pide una canción. Con texto, **busca primero en tu biblioteca local** y solo si no hay coincidencia consulta YouTube |
 | `!local <texto>` | Todos | Pide una pista solo de la biblioteca local; nunca consulta YouTube |
-| `!queue` | Todos | Canción actual y las 10 siguientes |
+| `!queue` | Todos | Canción actual y las 10 siguientes. Muestra el widget de OBS 10 s |
+| `!song` | Todos | Información de la canción actual; en pistas locales añade artista, álbum y nota de las etiquetas. Muestra el widget de OBS 10 s |
 | `!when` | Todos | Cuántas canciones suenan antes de tu última petición |
 | `!voteskip` | Todos | Un voto por usuario y canción; salta al llegar al umbral |
 | `!wrongsong` | Todos | Retira tu última petición |
@@ -163,7 +164,7 @@ data/       Datos locales y credenciales (ignorado por git)
 | 4.5 | Etiquetas, `!local` y búsqueda por comentario y descripción | Hecha |
 | 5 | Límites por usuario y global, historial, listas de reproducción y persistencia de la cola | Hecha |
 | 5.5 | Mensajes del bot editables y panel en dos columnas | Hecha |
-| 6 | Widget de OBS | Pendiente |
+| 6 | Widget de OBS | Hecha |
 | 7 | Diagnóstico, exportar/importar ajustes y controles de reproducción en el panel | Pendiente |
 | 8 | Opcionales: Spotify, editor del widget, chat de Kick y YouTube | Pendiente |
 
@@ -171,7 +172,7 @@ data/       Datos locales y credenciales (ignorado por git)
 
 - Al reiniciar, la canción que sonaba vuelve a empezar desde el principio cuando abres el panel.
 - Solo hay adaptador de chat para Twitch.
-- Todavía no hay widget para OBS. Para mostrar o capturar el audio hay que usar la pestaña del panel.
+- El widget de OBS muestra título y progreso, pero no reproduce audio: para capturarlo hay que usar la pestaña del panel, que además debe estar abierta para que avance la barra.
 - El título y el artista no se pueden editar desde el panel; salen de las etiquetas del archivo.
 
 ## Documentación

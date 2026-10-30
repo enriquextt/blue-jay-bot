@@ -163,6 +163,7 @@ export async function createServer({
     getVideoInfo,
     t,
     onChange: channel.broadcastState,
+    onShowWidget: channel.showWidget,
     voteSkipThreshold,
   });
   twitch = await startTwitch({ credentialsPath: twitchCredentialsPath, commands, log });
@@ -172,6 +173,7 @@ export async function createServer({
     library,
     history,
     commands,
+    channel,
     async close() {
       twitch?.stop();
       library.close();

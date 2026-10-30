@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchPlaylistVideos, fetchVideoInfo, fetchVideoTitle, parsePlaylistId, parseVideoId, searchVideoId } from '../server/youtube/youtube.js';
+import { fetchPlaylistVideos, fetchVideoInfo, fetchVideoTitle, parseDuration, parsePlaylistId, parseVideoId, searchVideoId } from '../server/youtube/youtube.js';
 
 const ID = 'dQw4w9WgXcQ';
 
@@ -125,13 +125,23 @@ test('fetchVideoInfo devuelve el título y si se puede incrustar', async () => {
   };
 
   const embeddable = await fetchVideoInfo(ID, 'CLAVE', respond({ snippet: { title: 'Título' }, status: { embeddable: true } }));
-  assert.deepEqual(embeddable, { title: 'Título', embeddable: true });
+  assert.deepEqual(embeddable, { title: 'Título', embeddable: true, duration: null, live: false });
+  assert.match(urls[0], /contentDetails/);
   assert.match(urls[0], /videos\?/);
   assert.match(urls[0], /id=dQw4w9WgXcQ/);
   assert.match(urls[0], /key=CLAVE/);
 
   const blocked = await fetchVideoInfo(ID, 'CLAVE', respond({ snippet: { title: 'Bloqueado' }, status: { embeddable: false } }));
-  assert.deepEqual(blocked, { title: 'Bloqueado', embeddable: false });
+  assert.deepEqual(blocked, { title: 'Bloqueado', embeddable: false, duration: null, live: false });
+
+  const timed = await fetchVideoInfo(ID, 'CLAVE', respond({ snippet: { title: 'T' }, contentDetails: { duration: 'PT3M33S' } }));
+  assert.equal(timed.duration, 213);
+  assert.equal(timed.live, false);
+
+  for (const [state, live] of [['live', true], ['upcoming', true], ['none', false]]) {
+    const item = { snippet: { title: 'T', liveBroadcastContent: state }, contentDetails: { duration: 'P0D' } };
+    assert.deepEqual(await fetchVideoInfo(ID, 'CLAVE', respond(item)), { title: 'T', embeddable: true, duration: null, live });
+  }
 
   // Sin el dato de `embeddable` no se asume que esté bloqueado.
   assert.equal((await fetchVideoInfo(ID, 'CLAVE', respond({ snippet: { title: 'T' } }))).embeddable, true);
@@ -140,4 +150,15 @@ test('fetchVideoInfo devuelve el título y si se puede incrustar', async () => {
 
 test('fetchVideoInfo lanza si la API falla', async () => {
   await assert.rejects(fetchVideoInfo(ID, 'CLAVE', async () => ({ ok: false, status: 403 })), /403/);
+});
+
+test('parseDuration convierte la duración ISO 8601 en segundos y descarta los directos', () => {
+  assert.equal(parseDuration('PT3M33S'), 213);
+  assert.equal(parseDuration('PT1H2M3S'), 3723);
+  assert.equal(parseDuration('PT45S'), 45);
+  assert.equal(parseDuration('P1DT1H'), 90000);
+  assert.equal(parseDuration('P0D'), null);
+  assert.equal(parseDuration('PT0S'), null);
+  assert.equal(parseDuration('basura'), null);
+  assert.equal(parseDuration(undefined), null);
 });

@@ -32,14 +32,15 @@ function applyTranslations() {
   }
 }
 
-export async function initI18n() {
+// `locale` fuerza un idioma (el widget de OBS lo recibe en la dirección); sin él se usa el guardado del panel.
+export async function initI18n(locale) {
   const resources = {};
   await Promise.all(LOCALES.map(async (locale) => {
     const response = await fetch(`/locales/${locale}.json`);
     resources[locale] = { translation: await response.json() };
   }));
 
-  await i18next.init({ lng: savedLocale(), fallbackLng: DEFAULT_LOCALE, resources });
+  await i18next.init({ lng: LOCALES.includes(locale) ? locale : savedLocale(), fallbackLng: DEFAULT_LOCALE, resources });
   applyTranslations();
 }
 

@@ -29,6 +29,11 @@ export async function createPlayer({ onEnded, onUnavailable }) {
     setVolume(volume) {
       player.setVolume(volume);
     },
+    progress() {
+      const duration = player.getDuration?.() ?? 0;
+      const paused = player.getPlayerState?.() !== YT.PlayerState.PLAYING;
+      return { position: player.getCurrentTime?.() ?? 0, duration, paused };
+    },
   };
 
   return new Promise((resolve) => {

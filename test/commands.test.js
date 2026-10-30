@@ -84,6 +84,30 @@ test('!queue lista la canción actual y las siguientes', async () => {
   assert.match(await say('ana', '!queue'), /Siguientes: 1\. Título dQw4w9WgXcQ/);
 });
 
+test('!song da la información de la canción actual y !queue y !song piden mostrar el widget', async () => {
+  let shown = 0;
+  const { say } = await setup({ onShowWidget: () => { shown += 1; } });
+  assert.match(await say('ana', '!song'), /Nada está sonando|Nothing is playing|No hay nada sonando/);
+
+  await say('ana', `!sr ${ID_A}`);
+  assert.equal(await say('ana', '!song'), `Suena: Título ${ID_A}.`);
+  await say('ana', '!queue');
+  assert.equal(shown, 3);
+});
+
+test('!song de una pista local añade artista, álbum y nota de las etiquetas', async () => {
+  const { say } = await setup({ library: fakeLibrary() });
+  await say('ana', '!local rick');
+  assert.equal(
+    await say('ana', '!song'),
+    'Suena: Never Gonna Give You Up · Artista: Rick Astley · Álbum: Whenever You Need Somebody · Nota: Single de 1987',
+  );
+
+  const bare = await setup({ library: fakeLibrary() });
+  await bare.say('ana', '!local sin artista');
+  assert.equal(await bare.say('ana', '!song'), 'Suena: Tema sin artista.');
+});
+
 test('!when indica cuántas canciones van antes de la del usuario', async () => {
   const { say } = await setup();
   await say('ana', `!sr ${ID_A}`);
@@ -183,6 +207,7 @@ function fakeLibrary(tracks = LOCAL_TRACKS, extra = { [LOCAL_TRACKS[0].localId]:
   return {
     searches,
     status: () => ({ count: tracks.length }),
+    tags: (id) => (id === LOCAL_TRACKS[0].localId ? { album: 'Whenever You Need Somebody', notes: ['Single de 1987'] } : null),
     search(query, { limit = 50, exclude = () => false } = {}) {
       searches.push(query);
       const terms = query.toLowerCase().split(/\s+/);
@@ -411,7 +436,7 @@ test('!local anota la biblioteca no disponible y las pistas que no encuentra', a
 });
 
 function playabilitySetup(info, options = {}) {
-  const state = { chatEnabled: true, localFallback: true, limits: { user: { enabled: false, max: 1 }, global: { enabled: false, max: 1 } } };
+  const state = { chatEnabled: true, localFallback: true, maxDuration: { enabled: false, minutes: 7 }, limits: { user: { enabled: false, max: 1 }, global: { enabled: false, max: 1 } } };
   const calls = [];
   const getVideoInfo = async (videoId) => {
     calls.push(videoId);
@@ -466,6 +491,38 @@ test('un vídeo que sí se puede incrustar, o una API que falla, se encolan como
 
   const missing = await playabilitySetup(null);
   assert.match(await missing.say('ana', `!sr ${ID_A}`), /suena ahora/);
+});
+
+test('un vídeo de más de 7 minutos o un directo se rechaza, también al buscar por título, y los directos se rechazan y los más cortos pasan', async () => {
+  const long = await playabilitySetup({ title: 'Disco entero', embeddable: true, duration: 7 * 60 + 1 });
+  long.state.maxDuration.enabled = true;
+  assert.match(await long.say('ana', `!sr https://youtu.be/${ID_A}`), /«Disco entero» dura más de 7 minutos/);
+  assert.equal(long.queue.snapshot().current, null);
+  assert.deepEqual(long.logged.map((entry) => entry.outcome), ['too_long']);
+
+  const search = await playabilitySetup({ title: 'Disco entero', embeddable: true, duration: 3600 }, { searchVideo: async () => ID_B });
+  search.state.maxDuration.enabled = true;
+  assert.match(await search.say('ana', '!sr una canción cualquiera'), /dura más de 7 minutos/);
+  assert.deepEqual(search.calls, [ID_B]);
+
+  const exact = await playabilitySetup({ title: 'Justa', embeddable: true, duration: 7 * 60 });
+  exact.state.maxDuration.enabled = true;
+  assert.match(await exact.say('ana', `!sr ${ID_A}`), /suena ahora/);
+
+  const live = await playabilitySetup({ title: 'Directo', embeddable: true, duration: null, live: true });
+  live.state.maxDuration.enabled = true;
+  assert.match(await live.say('ana', `!sr https://www.youtube.com/watch?v=${ID_A}`), /«Directo» es un directo/);
+  assert.equal(live.queue.snapshot().current, null);
+  assert.deepEqual(live.logged.map((entry) => entry.outcome), ['live']);
+  live.state.maxDuration.enabled = false;
+  assert.match(await live.say('ana', `!sr ${ID_A}`), /suena ahora/);
+
+  // El límite se lee de los ajustes (minutos) y se puede apagar.
+  const custom = await playabilitySetup({ title: 'Larga', embeddable: true, duration: 400 });
+  custom.state.maxDuration = { enabled: true, minutes: 5 };
+  assert.match(await custom.say('ana', `!sr ${ID_A}`), /dura más de 5 minutos/);
+  custom.state.maxDuration.enabled = false;
+  assert.match(await custom.say('ana', `!sr ${ID_A}`), /suena ahora/);
 });
 
 test('con el interruptor apagado, sin clave o buscando por título no se consulta la reproducibilidad', async () => {

@@ -14,6 +14,8 @@ export const OUTCOMES = [
   'disabled',
   'limit_user',
   'limit_global',
+  'too_long',
+  'live',
 ];
 export const KINDS = ['requests', 'plays'];
 

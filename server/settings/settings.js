@@ -2,11 +2,13 @@ import { EventEmitter } from 'node:events';
 
 export const MAX_LIMIT = 1000;
 const LIMIT_SCOPES = ['user', 'global'];
+export const MAX_DURATION_MINUTES = 600;
 const KEY = 'settings';
 
 const DEFAULTS = {
   chatEnabled: true,
   localFallback: true,
+  maxDuration: { enabled: true, minutes: 7 },
   limits: {
     user: { enabled: true, max: 25 },
     global: { enabled: true, max: 100 },
@@ -14,10 +16,12 @@ const DEFAULTS = {
 };
 
 const isLimit = (value) => Number.isInteger(value) && value >= 1 && value <= MAX_LIMIT;
+const isMinutes = (value) => Number.isInteger(value) && value >= 1 && value <= MAX_DURATION_MINUTES;
 
 // Ajustes que se cambian desde el panel y se guardan en la base de datos:
 // si el chat acepta peticiones, si un vídeo que no se puede reproducir se sustituye por su versión local
-// y los límites de peticiones activas (por usuario y global).
+// la duración máxima de los vídeos de YouTube pedidos por el chat y los límites de peticiones activas
+// (por usuario y global).
 export class Settings extends EventEmitter {
   #kv;
   #value;
@@ -48,6 +52,20 @@ export class Settings extends EventEmitter {
       next.localFallback = patch.localFallback;
     }
 
+    if ('maxDuration' in patch) {
+      const change = patch.maxDuration;
+      if (typeof change !== 'object' || change === null) return false;
+
+      if ('enabled' in change) {
+        if (typeof change.enabled !== 'boolean') return false;
+        next.maxDuration.enabled = change.enabled;
+      }
+      if ('minutes' in change) {
+        if (!isMinutes(change.minutes)) return false;
+        next.maxDuration.minutes = change.minutes;
+      }
+    }
+
     for (const scope of LIMIT_SCOPES) {
       const change = patch.limits?.[scope];
       if (change === undefined) continue;
@@ -76,6 +94,8 @@ export class Settings extends EventEmitter {
 
     if (typeof stored?.chatEnabled === 'boolean') value.chatEnabled = stored.chatEnabled;
     if (typeof stored?.localFallback === 'boolean') value.localFallback = stored.localFallback;
+    if (typeof stored?.maxDuration?.enabled === 'boolean') value.maxDuration.enabled = stored.maxDuration.enabled;
+    if (isMinutes(stored?.maxDuration?.minutes)) value.maxDuration.minutes = stored.maxDuration.minutes;
     for (const scope of LIMIT_SCOPES) {
       const limit = stored?.limits?.[scope];
       if (typeof limit?.enabled === 'boolean') value.limits[scope].enabled = limit.enabled;

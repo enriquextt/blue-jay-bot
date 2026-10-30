@@ -25,5 +25,8 @@ export function createLocalPlayer({ element, onEnded, onUnavailable, onBlocked }
     setVolume(volume) {
       element.volume = volume / 100;
     },
+    progress() {
+      return { position: element.currentTime, duration: element.duration, paused: element.paused };
+    },
   };
 }

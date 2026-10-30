@@ -15,6 +15,7 @@ test('los ajustes arrancan con el chat activado y los límites por defecto', () 
   assert.deepEqual(settings.get(), {
     chatEnabled: true,
     localFallback: true,
+    maxDuration: { enabled: true, minutes: 7 },
     limits: { user: { enabled: true, max: 25 }, global: { enabled: true, max: 100 } },
   });
 });
@@ -58,4 +59,16 @@ test('un ajuste guardado dañado se ignora campo a campo', () => {
   const { chatEnabled, limits } = new Settings({ kv }).get();
   assert.equal(chatEnabled, true);
   assert.deepEqual(limits.user, { enabled: false, max: 25 });
+});
+
+test('la duración máxima se cambia con minutos enteros de 1 a 600 y se rechaza el resto', () => {
+  const { kv, settings } = setup();
+
+  assert.equal(settings.update({ maxDuration: { minutes: 10, enabled: false } }), true);
+  assert.deepEqual(new Settings({ kv }).get().maxDuration, { enabled: false, minutes: 10 });
+
+  for (const maxDuration of [{ minutes: 0 }, { minutes: 601 }, { minutes: 2.5 }, { minutes: '7' }, { enabled: 'sí' }, null]) {
+    assert.equal(settings.update({ maxDuration }), false);
+  }
+  assert.deepEqual(settings.get().maxDuration, { enabled: false, minutes: 10 });
 });

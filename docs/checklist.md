@@ -52,6 +52,7 @@ Leyenda de la columna de decisión:
 - [x] Límite global de peticiones activas (por defecto 100) — **Mantener**
 - [x] Interruptores para activar o desactivar cada límite, con estado guardado — **Mantener** (pestaña Ajustes; se guarda en SQLite)
 - [x] Avisos en el chat cuando se alcanza un límite — **Mantener**
+- [x] Duración máxima de los vídeos de YouTube pedidos por el chat — **Añadir**. 7 minutos por defecto, configurable (1 a 600) y desactivable en Ajustes. Se comprueba con `videos.list` (necesita la clave de YouTube) en enlaces y en resultados de búsqueda; los directos (en vivo o programados) se rechazan siempre que el límite esté activo (resultado `live`). Las pistas locales no se limitan. Resultado `too_long` en el historial
 - [x] Interruptor para aceptar o no peticiones del chat — **Mantener** (requerimiento nuevo, fase 5). Con las peticiones desactivadas, `!sr` y `!local` responden con un aviso y no añaden nada; el resto de comandos siguen funcionando. Está en la barra superior y en Ajustes, y se guarda entre reinicios
 - [x] Lista negra / ban de canciones con un clic: se saltan y se eliminan de la cola — **Mantener** (guardada en `data/blacklist.json`; también se retiran de la lista base y se rechazan en `!sr`)
 - [x] Mensajes del bot editables por idioma — **Mantener**. Fase 5.5: pestaña Mensajes; cada mensaje `chat.*` se reescribe por idioma (es y en), con vista previa y las variables que admite. Máximo 400 caracteres y solo las variables que ya tiene el mensaje
@@ -91,14 +92,16 @@ Leyenda de la columna de decisión:
 
 ## 8. Widget de OBS
 
-- [ ] Widget compacto con título y progreso de la canción actual — **Adaptar** (el original usa el WebSocket de Streamer.bot; aquí lo sirve el WebSocket propio del servidor)
-- [ ] Actualización en vivo mediante WebSocket — **Mantener**
+- [x] Widget compacto con título y progreso de la canción actual — **Adaptar** (fase 6). `/widget.html`: fondo transparente, título en 2 líneas como máximo, artista, quién la pidió y barra con el tiempo. Se oculta cuando no suena nada
+- [x] Widget invisible en reposo, con disco girando a la izquierda — **Adaptar**. Sin título «Sonando ahora». Solo se ve 10 s al recibir `!queue` o `!song`, o al cambiar de pista (y durante la tarjeta de prueba); con `?idle=0.3` en la dirección queda con esa opacidad en reposo
+- [x] `!song`: información de la canción actual — **Adaptar**. En pistas locales añade artista, álbum y la primera nota de las etiquetas
+- [x] Actualización en vivo mediante WebSocket — **Mantener** (fase 6). El widget se conecta a `/ws?view=widget`, de solo lectura, y solo recibe la canción actual y su progreso. El progreso lo envía el reproductor del panel cada segundo, así que con el panel cerrado el widget no avanza
 - [ ] Audio opcional del widget (solo YouTube) — **Opcional**
 - [ ] Editor visual: mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento — **Opcional**
 - [ ] Guardar y sincronizar layouts con las fuentes del widget — **Opcional**
 - [ ] Badge de estado `!SR` editable — **Opcional**
-- [ ] Botón de prueba que envía una tarjeta temporal sin tocar la cola real — **Mantener**
-- [ ] URL del widget generada automáticamente desde Ajustes — **Mantener**
+- [x] Botón de prueba que envía una tarjeta temporal sin tocar la cola real — **Mantener** (fase 6). Pestaña Ajustes; la tarjeta dura 8 segundos
+- [x] URL del widget generada automáticamente desde Ajustes — **Mantener** (fase 6). Con botón de copiar; incluye `?lang=` con el idioma del panel
 
 ## 9. Idioma e interfaz
 

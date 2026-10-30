@@ -127,11 +127,25 @@ export async function fetchPlaylistVideos(playlistId, apiKey, fetchImpl = fetch)
 }
 
 const VIDEOS_ENDPOINT = 'https://www.googleapis.com/youtube/v3/videos';
+const LIVE_STATES = new Set(['live', 'upcoming']);
+const DURATION_PATTERN = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/;
 
-// Título y si el vídeo se puede incrustar, con videos.list (1 unidad de cuota). Devuelve null si el vídeo no
+// Duración ISO 8601 de la API («PT3M33S») en segundos. Devuelve null si no es válida o es 0: los directos
+// en vivo llegan como «P0D» y no tienen una duración que medir.
+export function parseDuration(value) {
+  const match = DURATION_PATTERN.exec(String(value ?? ''));
+  if (!match) return null;
+
+  const [days, hours, minutes, seconds] = match.slice(1).map((part) => Number(part ?? 0));
+  const total = ((days * 24 + hours) * 60 + minutes) * 60 + seconds;
+  return total > 0 ? total : null;
+}
+
+// Título, si el vídeo se puede incrustar, su duración en segundos (null si se desconoce) y si es un directo
+// (en vivo o programado), con videos.list (1 unidad de cuota). Devuelve null si el vídeo no
 // existe o es privado. Lanza un error si la API falla (clave inválida, cuota agotada, red).
 export async function fetchVideoInfo(videoId, apiKey, fetchImpl = fetch) {
-  const params = new URLSearchParams({ part: 'snippet,status', id: videoId, key: apiKey });
+  const params = new URLSearchParams({ part: 'snippet,status,contentDetails', id: videoId, key: apiKey });
 
   const response = await fetchImpl(`${VIDEOS_ENDPOINT}?${params}`, { signal: AbortSignal.timeout(TITLE_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`youtube.videos ${response.status}`);
@@ -139,5 +153,10 @@ export async function fetchVideoInfo(videoId, apiKey, fetchImpl = fetch) {
   const item = (await response.json()).items?.[0];
   if (typeof item?.snippet?.title !== 'string') return null;
 
-  return { title: item.snippet.title.slice(0, TITLE_MAX_LENGTH), embeddable: item.status?.embeddable !== false };
+  return {
+    title: item.snippet.title.slice(0, TITLE_MAX_LENGTH),
+    embeddable: item.status?.embeddable !== false,
+    duration: parseDuration(item.contentDetails?.duration),
+    live: LIVE_STATES.has(item.snippet.liveBroadcastContent),
+  };
 }
