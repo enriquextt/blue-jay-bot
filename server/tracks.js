@@ -31,6 +31,13 @@ export function parseEntry(raw) {
   return { source: 'youtube', videoId: raw.videoId, title };
 }
 
+// Título con el subtítulo entre paréntesis, solo si hay subtítulo y no repite el título.
+export function titleWithSubtitle(title, subtitle) {
+  const text = typeof subtitle === 'string' ? subtitle.trim() : '';
+  if (!text || text.toLowerCase() === title.trim().toLowerCase()) return title;
+  return `${title} (${text})`;
+}
+
 // Texto con el que se nombra una pista: las locales llevan el artista.
 export function trackLabel(track) {
   return track.artist ? `${track.artist} - ${track.title}` : track.title;

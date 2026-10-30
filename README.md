@@ -117,7 +117,7 @@ La petición de un viewer no interrumpe la canción de la lista base que está s
 | `!sr <enlace, ID o texto>` | Todos | Pide una canción. Con texto, **busca primero en tu biblioteca local** y solo si no hay coincidencia consulta YouTube |
 | `!local <texto>` | Todos | Pide una pista solo de la biblioteca local; nunca consulta YouTube |
 | `!queue` | Todos | Canción actual y las 10 siguientes. Muestra el widget de OBS 10 s |
-| `!song` | Todos | Información de la canción actual; en pistas locales añade artista, álbum y nota de las etiquetas. Muestra el widget de OBS 10 s |
+| `!song` | Todos | Información de la canción actual; en pistas locales añade artista, álbum y nota de las etiquetas, y el subtítulo entre paréntesis junto al título si lo tiene. Muestra el widget de OBS 10 s |
 | `!when` | Todos | Cuántas canciones suenan antes de tu última petición |
 | `!voteskip` | Todos | Un voto por usuario y canción; salta al llegar al umbral |
 | `!wrongsong` | Todos | Retira tu última petición |

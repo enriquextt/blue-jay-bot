@@ -24,12 +24,15 @@ export function readTags(file) {
 
 // Convierte una entrada del mapeo en el objeto que espera NodeID3.update.
 // Solo incluye los campos definidos, para no tocar el resto de frames.
+// Un valor `null` borra el frame (node-id3 elimina los frames con texto vacío).
 export function buildTags(entry) {
   const tags = {};
   for (const key of ['title', 'artist', 'album', 'subtitle']) {
-    if (entry[key]) tags[key] = entry[key];
+    if (entry[key] === null) tags[key] = '';
+    else if (entry[key]) tags[key] = entry[key];
   }
-  if (entry.comment) tags.comment = { language: 'eng', text: entry.comment };
+  if (entry.comment === null) tags.comment = { language: 'eng', text: '' };
+  else if (entry.comment) tags.comment = { language: 'eng', text: entry.comment };
   if (entry.description) {
     // node-id3 usa `value` (no `text`) dentro de userDefinedText.
     tags.userDefinedText = [{ description: 'DESCRIPTION', value: entry.description }];

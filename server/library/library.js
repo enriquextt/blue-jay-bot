@@ -310,11 +310,11 @@ export class Library extends EventEmitter {
     return track ? publicView(track) : null;
   }
 
-  // Etiquetas de una pista (álbum y notas, que el índice público no incluye), o null si no se leyeron.
+  // Etiquetas de una pista (subtítulo, álbum y notas, que el índice público no incluye), o null si no se leyeron.
   tags(id) {
     const track = this.#byId.get(id);
     const tags = track && this.#tagCache.get(track.relPath)?.tags;
-    return tags ? { album: tags.album ?? null, notes: tags.notes ?? [] } : null;
+    return tags ? { subtitle: tags.subtitle ?? null, album: tags.album ?? null, notes: tags.notes ?? [] } : null;
   }
 
   // Busca por título, artista, álbum, comentarios, descripciones y nombre de archivo, sin distinguir

@@ -108,6 +108,19 @@ test('!song de una pista local añade artista, álbum y nota de las etiquetas', 
   assert.equal(await bare.say('ana', '!song'), 'Suena: Tema sin artista.');
 });
 
+test('!song pone el subtítulo entre paréntesis solo si la pista local lo tiene', async () => {
+  const withTags = (tags) => ({ ...fakeLibrary(), tags: () => tags });
+  const subtitled = await setup({ library: withTags({ subtitle: 'A Mysterious Tale', album: null, notes: [] }) });
+  await subtitled.say('ana', '!local rick');
+  assert.equal(await subtitled.say('ana', '!song'), 'Suena: Never Gonna Give You Up (A Mysterious Tale) · Artista: Rick Astley');
+
+  for (const subtitle of [null, '', '   ', 'never gonna give you up']) {
+    const plain = await setup({ library: withTags({ subtitle, album: null, notes: [] }) });
+    await plain.say('ana', '!local rick');
+    assert.equal(await plain.say('ana', '!song'), 'Suena: Never Gonna Give You Up · Artista: Rick Astley');
+  }
+});
+
 test('!when indica cuántas canciones van antes de la del usuario', async () => {
   const { say } = await setup();
   await say('ana', `!sr ${ID_A}`);

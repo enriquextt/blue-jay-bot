@@ -19,7 +19,7 @@ function textOf(value) {
   return null;
 }
 
-// Lee título, artista, álbum, duración y notas (comentarios, descripciones y subtítulos) de un archivo.
+// Lee título, subtítulo, artista, álbum, duración y notas (comentarios, descripciones y subtítulos) de un archivo.
 // Lanza un error si el archivo no se puede leer como audio.
 export async function readTags(path) {
   const { common, format, native } = await parseFile(path, { skipCovers: true });
@@ -36,6 +36,7 @@ export async function readTags(path) {
 
   return {
     title: clean(common.title),
+    subtitle: clean(common.subtitle?.[0]),
     artist: clean(common.artist ?? common.albumartist),
     album: clean(common.album),
     notes,

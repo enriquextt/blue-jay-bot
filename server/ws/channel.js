@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
 import { MODES } from '../baselist/base-list.js';
 import { findLocalMatch } from '../library/title-match.js';
-import { toEntry, trackKey, trackLabel } from '../tracks.js';
+import { titleWithSubtitle, toEntry, trackKey, trackLabel } from '../tracks.js';
 import { parsePlaylistId, parseVideoId } from '../youtube/youtube.js';
 import { createCollectionCommands } from './collections.js';
 
@@ -68,7 +68,9 @@ export function createChannel({
     if (!current) return { current: null };
 
     const requestedBy = current.requestedBy?.slice(current.requestedBy.indexOf(':') + 1) || null;
-    return { current: { id: current.id, title: current.title, artist: current.artist ?? null, requestedBy } };
+    // En las pistas locales el título lleva entre paréntesis el subtítulo del archivo, si lo tiene.
+    const subtitle = current.source === 'local' ? library?.tags(current.localId)?.subtitle : null;
+    return { current: { id: current.id, title: titleWithSubtitle(current.title, subtitle), artist: current.artist ?? null, requestedBy } };
   }
 
   function broadcastState() {

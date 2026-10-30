@@ -297,6 +297,7 @@ test('readTags lee título, artista, álbum, duración y notas (comentario, subt
     assert.equal(tags.title, RICK.title);
     assert.equal(tags.artist, RICK.artist);
     assert.equal(tags.album, RICK.album);
+    assert.equal(tags.subtitle, RICK.subtitle);
     assert.ok(tags.duration > 0.9 && tags.duration < 1.2, `duración ${tags.duration}`);
     // La descripción (TXXX) solo está en las etiquetas nativas, no en `common`.
     assert.deepEqual([...tags.notes].sort(), ['cancion para troll', 'rickroll; alt: Nunca te voy a dejar', 'version original']);
@@ -334,7 +335,7 @@ test('con etiquetas reales, mandan sobre el nombre del archivo y la búsqueda us
     const plain = library.search('otra cosa').items[0];
     assert.equal(plain.artist, 'Sin etiquetas');
     assert.equal(plain.duration, null);
-    assert.deepEqual(library.tags(plain.localId), { album: null, notes: [] });
+    assert.deepEqual(library.tags(plain.localId), { subtitle: null, album: null, notes: [] });
     assert.equal(library.tags('no-existe'), null);
     assert.equal(library.status().status, 'ready');
   } finally {

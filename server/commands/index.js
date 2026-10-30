@@ -1,5 +1,5 @@
 import { findLocalMatch } from '../library/title-match.js';
-import { trackLabel as label } from '../tracks.js';
+import { titleWithSubtitle, trackLabel as label } from '../tracks.js';
 import { parseVideoId } from '../youtube/youtube.js';
 
 const PREFIX = '!';
@@ -196,8 +196,9 @@ export function createCommands({
       note && t('chat.song.note', { note: preview(note, NOTE_PREVIEW_LENGTH) }),
     ].filter(Boolean);
 
-    if (details.length === 0) return t('chat.song.playing', { title: current.title });
-    return t('chat.song.details', { title: current.title, details: details.join(' · ') });
+    const title = titleWithSubtitle(current.title, tags?.subtitle);
+    if (details.length === 0) return t('chat.song.playing', { title });
+    return t('chat.song.details', { title, details: details.join(' · ') });
   }
 
   function showQueue() {

@@ -1,13 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
 import { WebSocket } from 'ws';
 import { createServer } from '../server/app.js';
 
 const ID_A = 'aqz-KE-bpKQ';
 
-async function startServer() {
+async function startServer(options = {}) {
   const fetchTitle = async (videoId) => `Título ${videoId}`;
-  const server = await createServer({ host: '127.0.0.1', port: 0, fetchTitle });
+  const server = await createServer({ host: '127.0.0.1', port: 0, fetchTitle, ...options });
   const { port } = server.app.server.address();
   return { server, url: `ws://127.0.0.1:${port}/ws` };
 }
@@ -156,5 +159,48 @@ test('mostrar el widget (!queue, !song) se envía solo a los widgets', async () 
     widget.socket.close();
   } finally {
     await server.close();
+  }
+});
+
+test('el widget muestra el subtítulo de una pista local entre paréntesis y nada si no lo tiene', async () => {
+  const base = await mkdtemp(join(tmpdir(), 'bluejay-widget-'));
+  const music = join(base, 'musica');
+  await mkdir(music);
+  await writeFile(join(music, 'con.mp3'), 'datos');
+  await writeFile(join(music, 'sin.mp3'), 'datos');
+  await writeFile(join(music, 'vacio.mp3'), 'datos');
+
+  const SUBTITLES = { 'con.mp3': 'A Mysterious Tale', 'sin.mp3': null, 'vacio.mp3': '   ' };
+  const { server, url } = await startServer({
+    libraryConfigPath: join(base, 'library.json'),
+    watchLibrary: false,
+    readTags: async (path) => {
+      const name = basename(path);
+      return { title: name, subtitle: SUBTITLES[name], artist: 'Alguien', album: null, notes: [], duration: 10 };
+    },
+  });
+  const panel = await connect(url);
+  const widget = await connect(`${url}?view=widget`);
+  try {
+    send(panel, { type: 'library.setFolder', path: music });
+    await panel.waitFor((m) => m.type === 'library' && m.data.status === 'ready' && m.data.count === 3);
+    send(panel, { type: 'library.search', query: 'mp3' });
+    const { items } = await panel.waitFor((m) => m.type === 'library.results' && m.query === 'mp3');
+
+    for (const name of ['con.mp3', 'sin.mp3', 'vacio.mp3']) {
+      send(panel, { type: 'library.queue', id: items.find((item) => item.title === name).id });
+    }
+    await widget.waitFor((m) => m.type === 'state' && m.data.current);
+    send(panel, { type: 'playback.next' });
+    send(panel, { type: 'playback.next' });
+    await pause(200);
+
+    const titles = widget.messages.filter((m) => m.type === 'state' && m.data.current).map((m) => m.data.current.title);
+    assert.deepEqual([...new Set(titles)], ['con.mp3 (A Mysterious Tale)', 'sin.mp3', 'vacio.mp3']);
+  } finally {
+    panel.socket.close();
+    widget.socket.close();
+    await server.close();
+    await rm(base, { recursive: true, force: true });
   }
 });

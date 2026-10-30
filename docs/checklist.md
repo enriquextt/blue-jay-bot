@@ -92,9 +92,9 @@ Leyenda de la columna de decisión:
 
 ## 8. Widget de OBS
 
-- [x] Widget compacto con título y progreso de la canción actual — **Adaptar** (fase 6). `/widget.html`: fondo transparente, título en 2 líneas como máximo, artista, quién la pidió y barra con el tiempo. Se oculta cuando no suena nada
+- [x] Widget compacto con título y progreso de la canción actual — **Adaptar** (fase 6). `/widget.html`: fondo transparente, título en 2 líneas como máximo (en pistas locales con el subtítulo entre paréntesis, si lo tiene), artista, quién la pidió y barra con el tiempo. Se oculta cuando no suena nada
 - [x] Widget invisible en reposo, con disco girando a la izquierda — **Adaptar**. Sin título «Sonando ahora». Solo se ve 10 s al recibir `!queue` o `!song`, o al cambiar de pista (y durante la tarjeta de prueba); con `?idle=0.3` en la dirección queda con esa opacidad en reposo
-- [x] `!song`: información de la canción actual — **Adaptar**. En pistas locales añade artista, álbum y la primera nota de las etiquetas
+- [x] `!song`: información de la canción actual — **Adaptar**. En pistas locales añade artista, álbum y la primera nota de las etiquetas, y el título lleva entre paréntesis el subtítulo (`TIT3`) si lo tiene
 - [x] Actualización en vivo mediante WebSocket — **Mantener** (fase 6). El widget se conecta a `/ws?view=widget`, de solo lectura, y solo recibe la canción actual y su progreso. El progreso lo envía el reproductor del panel cada segundo, así que con el panel cerrado el widget no avanza
 - [ ] Audio opcional del widget (solo YouTube) — **Opcional**
 - [ ] Editor visual: mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento — **Opcional**

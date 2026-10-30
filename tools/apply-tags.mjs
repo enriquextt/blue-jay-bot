@@ -32,13 +32,13 @@ async function main() {
 
     // Verificación: leer de nuevo el archivo y comparar cada campo del mapeo.
     const actual = readTags(file);
-    const mismatches = FIELDS.filter(k => k in entry && actual[k] !== entry[k]);
+    const mismatches = FIELDS.filter(k => k in entry && (actual[k] ?? null) !== entry[k]);
     if (mismatches.length === 0) {
       console.log('  OK (verificado)');
     } else {
       failures++;
       for (const k of mismatches) {
-        console.log(`  MISMATCH ${k}: esperado "${entry[k]}", leído "${actual[k]}"`);
+        console.log(`  MISMATCH ${k}: esperado "${entry[k]}", leído "${actual[k] ?? null}"`);
       }
     }
   }
