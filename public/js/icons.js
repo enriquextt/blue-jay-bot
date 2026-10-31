@@ -8,6 +8,7 @@ const SHAPES = {
   plus: [['path', 'M12 5v14M5 12h14']],
   listAdd: [['path', 'M4 7h11M4 12h7M4 17h7M17 13v6M14 16h6']],
   play: [['path', 'M7 4.5l12 7.5-12 7.5z']],
+  pause: [['path', 'M8 5v14M16 5v14']],
   stop: [['path', 'M7 7h10v10H7z']],
   skipNext: [['path', 'M6 5l9 7-9 7zM18 5v14']],
   shuffle: [['path', 'M16 4h4v4M4 20L20 4M20 16v4h-4M15 15l5 5M4 4l5 5']],

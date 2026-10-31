@@ -33,6 +33,7 @@ export function createChannel({
   announce = () => {},
   listPlaylist = null,
   onStateChange = () => {},
+  getDiagnostics = () => ({}),
 }) {
   const clients = new Set();
   // Widgets de OBS (`/ws?view=widget`): solo leen el estado de reproducción, nunca mandan órdenes.
@@ -251,6 +252,16 @@ export function createChannel({
       case 'playback.next': {
         queue.advance();
         return broadcastState();
+      }
+
+      case 'playback.pause': {
+        if (typeof command.paused !== 'boolean') return sendError(socket, 'errors.invalidMessage');
+        if (queue.setPaused(command.paused)) broadcastState();
+        return;
+      }
+
+      case 'diagnostics.get': {
+        return send(socket, { type: 'diagnostics', data: { ...getDiagnostics(), panels: clients.size, widgets: widgets.size } });
       }
 
       case 'playback.volume': {

@@ -81,6 +81,7 @@ export function createTwitchAdapter({
   let stopped = false;
   let attempts = 0;
   let reconnectTimer = null;
+  let connected = false;
 
   async function refreshToken() {
     const response = await fetchImpl(TOKEN_URL, {
@@ -118,6 +119,7 @@ export function createTwitchAdapter({
     if (parsed.command === 'PING') return socket.send(`PONG :${parsed.trailing ?? 'tmi.twitch.tv'}`);
     if (parsed.command === '001') {
       attempts = 0;
+      connected = true;
       return log('twitch.connected');
     }
     if (parsed.command === 'NOTICE' && parsed.trailing?.includes('authentication failed')) {
@@ -150,13 +152,17 @@ export function createTwitchAdapter({
         if (line) handleLine(line).catch((error) => log('twitch.error', error));
       }
     });
-    socket.on('close', scheduleReconnect);
+    socket.on('close', () => {
+      connected = false;
+      scheduleReconnect();
+    });
     socket.on('error', (error) => log('twitch.error', error));
   }
 
   return {
     start: connect,
     say,
+    status: () => (connected ? 'connected' : 'connecting'),
     stop() {
       stopped = true;
       clearTimeout(reconnectTimer);

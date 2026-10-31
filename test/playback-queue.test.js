@@ -55,6 +55,24 @@ test('remove quita una pendiente y avanza si se quita la que suena', () => {
   assert.equal(queue.remove(current.id), false);
 });
 
+test('setPaused solo actúa con una pista sonando, avisa de si cambió algo y se rearma al avanzar', () => {
+  const queue = new PlaybackQueue();
+  assert.equal(queue.setPaused(true), false);
+  assert.equal(queue.snapshot().paused, false);
+
+  ['A', 'B'].forEach((title) => queue.add({ videoId: title, title }));
+  assert.equal(queue.setPaused(true), true);
+  assert.equal(queue.setPaused(true), false);
+  assert.equal(queue.snapshot().paused, true);
+
+  queue.advance();
+  assert.equal(queue.snapshot().paused, false);
+
+  queue.setPaused(true);
+  queue.replaceCurrent(queue.snapshot().current.id, { videoId: 'C', title: 'C' });
+  assert.equal(queue.snapshot().paused, false);
+});
+
 test('advance con la cola vacía deja current en null', () => {
   const queue = new PlaybackQueue();
   queue.add({ videoId: 'a', title: 'A' });

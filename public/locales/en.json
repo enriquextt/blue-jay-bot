@@ -11,7 +11,10 @@
   "now": {
     "title": "Now playing",
     "empty": "Nothing playing",
-    "next": "Next"
+    "next": "Next",
+    "pause": "Pause",
+    "resume": "Resume",
+    "shuffle": "Shuffle: the base list plays in random order"
   },
   "volume": {
     "label": "Volume"
@@ -197,6 +200,26 @@
     "widgetCopied": "Address copied.",
     "widgetCopyFailed": "Could not copy: select the address and copy it by hand.",
     "widgetTest": "Send test card"
+  },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "refresh": "Refresh",
+    "websocket": "Connection to the server",
+    "panels": "Open panels",
+    "widgets": "Connected OBS widgets",
+    "widgetsNone": "none",
+    "youtubeKey": "YouTube key",
+    "youtubeKeyOn": "set",
+    "youtubeKeyOff": "missing: !sr only accepts links and video length is not checked",
+    "twitch": "Twitch chat",
+    "twitchStatus": {
+      "connected": "connected",
+      "connecting": "connecting…",
+      "disabled": "not set up"
+    },
+    "version": "Version",
+    "uptime": "Server up for",
+    "uptimeValue": "{{hours}} h {{minutes}} min"
   },
   "widget": {
     "requestedBy": "requested by {{user}}",

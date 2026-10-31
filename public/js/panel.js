@@ -1,4 +1,5 @@
 import { confirmOnSecondClick, iconButton, textButton, titleSpan, trackLabel } from './dom.js';
+import { createDiagnosticsView } from './diagnostics-view.js';
 import { createHistoryView } from './history-view.js';
 import { currentLocale, initI18n, setLocale, t } from './i18n.js';
 import { icon } from './icons.js';
@@ -20,6 +21,8 @@ const elements = {
   addForm: document.querySelector('#add-form'),
   addInput: document.querySelector('#add-input'),
   next: document.querySelector('#next'),
+  pause: document.querySelector('#pause'),
+  nowShuffle: document.querySelector('#now-shuffle'),
   nowFavorite: document.querySelector('#now-favorite'),
   nowBan: document.querySelector('#now-ban'),
   volume: document.querySelector('#volume'),
@@ -66,17 +69,19 @@ const elements = {
 
 const TAB_STORAGE_KEY = 'blueJay.tab';
 
-let state = { current: null, queue: [], volume: 50, fallback: { active: false, mode: 'sequential', includeLibrary: false } };
+let state = { current: null, queue: [], volume: 50, paused: false, fallback: { active: false, mode: 'sequential', includeLibrary: false } };
 let baseListData = { items: [], banned: [] };
 let libraryStatus = { configured: false, folderName: null, status: 'none', count: 0 };
 let libraryResults = { items: [], total: 0 };
 let localPlayer = null;
+let diagnostics = null;
 let searchTimer = null;
 let connection = 'connecting';
 let socket = null;
 const views = [];
 let player = null;
 let loadedId = null;
+let appliedPaused = false;
 let adjustingVolume = false;
 let lastVolumeSent = 0;
 
@@ -117,6 +122,17 @@ function renderNow() {
   const { current } = state;
   elements.nowTitle.textContent = current ? trackLabel(current) : t('now.empty');
   elements.next.disabled = !current;
+
+  const pauseLabel = document.createElement('span');
+  pauseLabel.textContent = t(state.paused ? 'now.resume' : 'now.pause');
+  elements.pause.replaceChildren(icon(state.paused ? 'play' : 'pause'), pauseLabel);
+  elements.pause.disabled = !current;
+
+  // Aleatorio: la lista base suena en orden aleatorio; al soltarlo vuelve al orden de la lista.
+  const shuffling = state.fallback.active && state.fallback.mode === 'shuffle';
+  elements.nowShuffle.setAttribute('aria-pressed', String(shuffling));
+  elements.nowShuffle.title = t('now.shuffle');
+  elements.nowShuffle.setAttribute('aria-label', t('now.shuffle'));
 
   setFavoriteButton(elements.nowFavorite, current?.favorite === true);
   elements.nowFavorite.disabled = !current;
@@ -303,13 +319,26 @@ function setupTabs() {
   selectTab(savedTab() ?? elements.tabs[0].dataset.tab);
 }
 
+// Pausa o reanuda el reproductor que suena cuando el servidor cambia el estado de pausa.
+function syncPaused() {
+  if (state.paused === appliedPaused) return;
+
+  appliedPaused = state.paused;
+  const active = state.current?.source === 'local' ? localPlayer : player;
+  if (state.paused) active?.pause();
+  else active?.resume();
+}
+
 function syncPlayer() {
   player?.setVolume(state.volume);
   localPlayer?.setVolume(state.volume);
 
   const { current } = state;
   const wanted = current?.id ?? null;
-  if (wanted === loadedId) return;
+  if (wanted === loadedId) {
+    syncPaused();
+    return;
+  }
 
   // El reproductor de YouTube puede no estar listo todavía: start() vuelve a llamar cuando lo esté.
   const isLocal = current?.source === 'local';
@@ -326,6 +355,10 @@ function syncPlayer() {
   } else if (current) {
     player.load(current.videoId);
   }
+
+  // Una pista nueva empieza sonando; si el servidor la tiene en pausa (panel recién abierto), se pausa.
+  appliedPaused = false;
+  syncPaused();
 }
 
 // El progreso solo lo conoce el reproductor de este panel: se lo pasa al servidor para el widget de OBS.
@@ -385,6 +418,7 @@ function connect() {
   socket.addEventListener('open', () => {
     connection = 'open';
     renderStatus();
+    diagnostics.refresh();
   });
 
   socket.addEventListener('close', () => {
@@ -443,6 +477,7 @@ function setupLibraryEvents() {
 // Los botones con texto llevan el icono delante; el texto va en un <span> para que i18n no lo borre.
 const BUTTON_ICONS = {
   '#next': 'skipNext',
+  '#now-shuffle': 'shuffle',
   '#baselist-start': 'play',
   '#baselist-shuffle': 'shuffle',
   '#baselist-stop': 'stop',
@@ -480,6 +515,11 @@ function setupEvents() {
   });
 
   elements.next.addEventListener('click', () => send({ type: 'playback.next' }));
+  elements.pause.addEventListener('click', () => send({ type: 'playback.pause', paused: !state.paused }));
+  elements.nowShuffle.addEventListener('click', () => {
+    const shuffling = elements.nowShuffle.getAttribute('aria-pressed') === 'true';
+    send({ type: 'baselist.start', mode: shuffling ? 'sequential' : 'shuffle' });
+  });
   elements.nowFavorite.addEventListener('click', () => {
     if (state.current) send({ type: 'favorite.set', id: state.current.id, favorite: !state.current.favorite });
   });
@@ -517,7 +557,9 @@ function setupSortable() {
 
 async function start() {
   await initI18n();
+  diagnostics = createDiagnosticsView({ send, connectionText: () => t(CONNECTION_KEYS[connection]) });
   views.push(
+    diagnostics,
     createSettingsView({ send, showNotice }),
     createHistoryView({ send }),
     createPlaylistsView({ send }),

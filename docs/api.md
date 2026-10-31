@@ -61,7 +61,8 @@ Ruta: `ws://<host>/ws`. Todos los cambios de estado se difunden a todos los clie
 
 | `type` | Campos | Cuándo |
 |---|---|---|
-| `state` | `data`: `{ current, queue, volume, fallback }` | Al conectar y después de cada cambio de reproducción |
+| `state` | `data`: `{ current, queue, volume, paused, fallback }` | Al conectar y después de cada cambio de reproducción. `paused` es `true` si la canción actual está en pausa |
+| `diagnostics` | `data`: `{ version, uptime, youtubeKey, twitch, panels, widgets }` | Respuesta a `diagnostics.get`. Solo llega al cliente que preguntó. `uptime` en segundos; `youtubeKey` es un booleano (nunca la clave); `twitch` es `connected`, `connecting` o `disabled` (sin credenciales); `panels` y `widgets` son los clientes conectados |
 | `baselist` | `data`: `{ items, banned }` | Al conectar y después de cada cambio en la lista base o en la lista negra |
 | `library` | `data`: `{ configured, folderName, status, count }` | Al conectar y cuando cambia la carpeta o el escaneo. `status` es `none`, `scanning`, `ready` o `error`. `folderName` es solo el nombre de la carpeta, nunca la ruta |
 | `library.results` | `query`, `items`, `total` | Respuesta a `library.search`. Solo llega al cliente que preguntó. Cada ítem es `{ id, source, localId, title, artist, duration, favorite }` con `id` igual a `localId` y `duration` en segundos (`null` si se desconoce) |
@@ -89,6 +90,8 @@ Ejemplo de aviso:
 | `queue.remove` | `id` | Quita la canción de la cola. Si es la que suena, pasa a la siguiente |
 | `queue.move` | `id`, `toIndex` (entero) | Mueve una canción de la cola a esa posición (0 = primera pendiente) |
 | `playback.next` | — | Salta la canción que suena |
+| `playback.pause` | `paused` (booleano) | Pausa o reanuda la canción que suena en todos los paneles abiertos y lo difunde en `state`. Sin canción o con el mismo valor, no hace nada. Pasar a otra canción la deja sonando. Un valor no booleano: `errors.invalidMessage` |
+| `diagnostics.get` | — | Pide el estado del sistema; el servidor responde con `diagnostics` |
 | `playback.volume` | `volume` (entero 0–100) | Ajusta el volumen global y lo difunde en `state`. Fuera de rango o no entero: `errors.invalidMessage` |
 | `playback.ended` | `id` | El reproductor avisa de que la canción terminó. Si `id` no es la que suena, se ignora |
 | `playback.unavailable` | `id` | El reproductor no puede reproducir la canción. Si es una petición de YouTube, `settings.localFallback` está activado y su título coincide con una pista de la biblioteca, esa pista sustituye a la que suena (misma persona, mismo origen; `notice` `notices.replacedByLocal` con `title` y `replacement`, y aviso en el chat). Si no, se salta y se envía un `notice`. Si `id` no es la que suena, se ignora |

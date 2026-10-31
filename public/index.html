@@ -33,7 +33,9 @@
         <div class="now-actions">
           <button id="now-favorite" class="icon" type="button"></button>
           <button id="now-ban" class="icon danger" type="button"></button>
+          <button id="pause" type="button"></button>
           <button id="next" type="button"><span data-i18n="now.next">Siguiente</span></button>
+          <button id="now-shuffle" class="icon" type="button" aria-pressed="false"></button>
         </div>
         <div class="player-frame">
           <div id="player"></div>
@@ -251,6 +253,12 @@
         </div>
         <p class="widget-actions">
           <button id="widget-test" class="secondary" type="button" data-i18n="settings.widgetTest">Enviar tarjeta de prueba</button>
+        </p>
+
+        <h3 class="section-title" data-i18n="diagnostics.title">Diagnóstico</h3>
+        <dl id="diagnostics" class="diagnostics"></dl>
+        <p class="widget-actions">
+          <button id="diagnostics-refresh" class="secondary" type="button" data-i18n="diagnostics.refresh">Actualizar</button>
         </p>
       </div>
     </section>

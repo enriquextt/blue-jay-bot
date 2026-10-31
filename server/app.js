@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
@@ -44,6 +45,7 @@ export async function createServer({
   fetchInfo = null,
 }) {
   const app = Fastify({ logger: false });
+  const { version } = JSON.parse(await readFile(join(ROOT_DIR, 'package.json'), 'utf8'));
   const blacklist = new Blacklist({ path: blacklistPath, log });
   const library = new Library({ configPath: libraryConfigPath, log, watch: watchLibrary, readTags });
   const baseList = new BaseList({ path: baseListPath, log, library, isBanned: (key) => blacklist.hasKey(key) });
@@ -95,8 +97,8 @@ export async function createServer({
 
   const withFavorite = (track) => track && { ...track, favorite: baseList.isFavorite(trackKey(track)) };
   const getState = () => {
-    const { current, queue: pending, volume } = queue.snapshot();
-    return { current: withFavorite(current), queue: pending.map(withFavorite), volume, fallback: baseList.status() };
+    const { current, queue: pending, volume, paused } = queue.snapshot();
+    return { current: withFavorite(current), queue: pending.map(withFavorite), volume, paused, fallback: baseList.status() };
   };
 
   await app.register(fastifyStatic, { root: PUBLIC_DIR });
@@ -149,6 +151,13 @@ export async function createServer({
     t,
     announce: (text) => twitch?.say(text),
     onStateChange: scheduleSave,
+    // Estado de lo que no cambia en el panel: nada de claves, rutas ni credenciales, solo si existen.
+    getDiagnostics: () => ({
+      version,
+      uptime: Math.round(process.uptime()),
+      youtubeKey: Boolean(youtube?.apiKey),
+      twitch: twitch?.status() ?? 'disabled',
+    }),
     listPlaylist: youtube?.apiKey ? (playlistId) => fetchPlaylistVideos(playlistId, youtube.apiKey) : null,
   });
 

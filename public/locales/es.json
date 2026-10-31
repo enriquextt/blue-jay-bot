@@ -11,7 +11,10 @@
   "now": {
     "title": "Sonando ahora",
     "empty": "Nada sonando",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "pause": "Pausar",
+    "resume": "Reanudar",
+    "shuffle": "Aleatorio: la lista base suena en orden aleatorio"
   },
   "volume": {
     "label": "Volumen"
@@ -197,6 +200,26 @@
     "widgetCopied": "Dirección copiada.",
     "widgetCopyFailed": "No se pudo copiar: selecciona la dirección y cópiala a mano.",
     "widgetTest": "Enviar tarjeta de prueba"
+  },
+  "diagnostics": {
+    "title": "Diagnóstico",
+    "refresh": "Actualizar",
+    "websocket": "Conexión con el servidor",
+    "panels": "Paneles abiertos",
+    "widgets": "Widgets de OBS conectados",
+    "widgetsNone": "ninguno",
+    "youtubeKey": "Clave de YouTube",
+    "youtubeKeyOn": "configurada",
+    "youtubeKeyOff": "falta: !sr solo acepta enlaces y no se mide la duración",
+    "twitch": "Chat de Twitch",
+    "twitchStatus": {
+      "connected": "conectado",
+      "connecting": "conectando…",
+      "disabled": "sin configurar"
+    },
+    "version": "Versión",
+    "uptime": "Servidor activo desde hace",
+    "uptimeValue": "{{hours}} h {{minutes}} min"
   },
   "widget": {
     "requestedBy": "pedida por {{user}}",

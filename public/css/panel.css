@@ -108,8 +108,9 @@ main {
   margin-bottom: 12px;
 }
 
-.now-actions #next {
+.now-actions button:not(.icon) {
   flex: 1;
+  min-width: 0;
 }
 
 .now-title {
@@ -431,6 +432,21 @@ button[aria-pressed="true"] {
 
 .widget-actions {
   margin: 12px 0 0;
+}
+
+.diagnostics {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.diagnostics dt {
+  color: var(--muted);
+}
+
+.diagnostics dd {
+  margin: 0;
 }
 
 input.number {

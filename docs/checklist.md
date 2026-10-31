@@ -82,11 +82,11 @@ Leyenda de la columna de decisión:
 ## 7. Panel de control de la lista de reproducción (nuevo)
 
 - [x] Ver cola, lista base e historial en un único panel — **Mantener** (requerimiento nuevo). Pestañas Cola, Lista base, Biblioteca local, Historial, Listas, Lista negra y Ajustes
-- [ ] Reordenar, eliminar y saltar pistas desde el panel — **Mantener** (requerimiento nuevo). Asignado a la fase 7
+- [x] Reordenar, eliminar y saltar pistas desde el panel — **Mantener** (requerimiento nuevo). Arrastrar para reordenar la cola, «Quitar» en cada pista y «Siguiente» en «Sonando ahora» (fases 1 y 7)
 - [x] Gestionar listas base (añadir, quitar, activar) — **Mantener** (requerimiento nuevo). La lista base es única (ver `docs/propuesta.md`, 3.5)
 - [x] Listas de reproducción propias: crear, renombrar y eliminar — **Mantener** (requerimiento nuevo, fase 5). Hasta 100 listas de 2.000 pistas, sin repetir pistas dentro de una lista; se guardan en SQLite
 - [x] Añadir a la cola una canción o toda una lista de reproducción — **Mantener** (requerimiento nuevo, fase 5). Se saltan las pistas vetadas o que ya no están en la biblioteca
-- [ ] Controles de reproducción: play, pausa, siguiente, aleatorio — **Mantener** (requerimiento nuevo). Asignado a la fase 7
+- [x] Controles de reproducción: play, pausa, siguiente, aleatorio — **Mantener** (requerimiento nuevo, fase 7). En «Sonando ahora»: Pausar/Reanudar (para todos los paneles abiertos), Siguiente y Aleatorio (pone la lista base en SHUFFLE o la devuelve al orden). Si pausas con los controles del propio reproductor, el botón no se entera
 - [x] Ver el estado en vivo de la cola y de la canción actual — **Mantener** (requerimiento nuevo)
 - [x] Panel en dos columnas — **Mantener** (requerimiento nuevo, fase 5.5). A la izquierda (1/3) «Sonando ahora», con favorito, vetar y siguiente en una sola fila arriba, «Añadir canción» y «Cola»; a la derecha (2/3) el resto de pestañas. En pantallas estrechas se apilan
 
@@ -116,7 +116,7 @@ Leyenda de la columna de decisión:
 - [ ] Servidor HTTP local que sirve la página — **Adaptar** (propio de Node o Python)
 - [ ] Servidor WebSocket local para chat y widget — **Adaptar**
 - [ ] Clave de API de YouTube Data API v3 guardada en Ajustes — **Mantener**
-- [ ] Panel de diagnóstico: estado del WebSocket, widgets conectados y presencia de la clave de API — **Mantener**. Asignado a la fase 7 (sin «versión del import» ni «puente del widget»: dependían de Streamer.bot)
+- [x] Panel de diagnóstico: estado del WebSocket, widgets conectados y presencia de la clave de API — **Mantener**. Fase 7: sección «Diagnóstico» en Ajustes, con la conexión del panel, paneles y widgets conectados, clave de YouTube (solo si existe), estado del chat de Twitch, versión y tiempo activo. Sin «versión del import» ni «puente del widget»: dependían de Streamer.bot
 - [ ] Verificación de la versión del import de Streamer.bot con aviso si falta algo — **Mantener**. Descartado: Streamer.bot ya no forma parte del proyecto (ver `docs/propuesta.md`)
 - [ ] Exportar e importar ajustes, favoritos, historial, layouts y mensajes personalizados — **Mantener**. Asignado a la fase 9, después del editor de layouts
 - [ ] Exportar ajustes sin incluir la clave de API ni los tokens de Spotify — **Mantener**. Asignado a la fase 9

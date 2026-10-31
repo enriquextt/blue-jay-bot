@@ -6,6 +6,7 @@ const DEFAULT_VOLUME = 50;
 export class PlaybackQueue {
   #items = [];
   #current = null;
+  #paused = false;
   #volume = DEFAULT_VOLUME;
   #fallback;
   #onPlay;
@@ -79,8 +80,17 @@ export class PlaybackQueue {
 
   advance() {
     this.#current = this.#items.shift() ?? this.#nextFromFallback();
+    this.#paused = false;
     if (this.#current) this.#onPlay(this.#current);
     return this.#current;
+  }
+
+  // Pausa o reanuda la pista que suena. Devuelve false si no hay nada que pausar o el estado ya era ese.
+  setPaused(paused) {
+    if (!this.#current || this.#paused === paused) return false;
+
+    this.#paused = paused;
+    return true;
   }
 
   // Cambia la pista que suena por otra, conservando su origen y quien la pidió (por ejemplo, un vídeo que no se
@@ -90,6 +100,7 @@ export class PlaybackQueue {
 
     const { origin, requestedBy } = this.#current;
     this.#current = { id: randomUUID(), origin, requestedBy, ...toEntry(entry) };
+    this.#paused = false;
     this.#onPlay(this.#current);
     return this.#current;
   }
@@ -131,6 +142,6 @@ export class PlaybackQueue {
   }
 
   snapshot() {
-    return { current: this.#current, queue: [...this.#items], volume: this.#volume };
+    return { current: this.#current, queue: [...this.#items], volume: this.#volume, paused: this.#paused };
   }
 }

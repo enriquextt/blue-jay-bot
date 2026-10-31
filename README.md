@@ -165,7 +165,7 @@ data/       Datos locales y credenciales (ignorado por git)
 | 5 | Límites por usuario y global, historial, listas de reproducción y persistencia de la cola | Hecha |
 | 5.5 | Mensajes del bot editables y panel en dos columnas | Hecha |
 | 6 | Widget de OBS | Hecha |
-| 7 | Diagnóstico y controles de reproducción en el panel | Pendiente |
+| 7 | Diagnóstico y controles de reproducción en el panel | Hecha |
 | 8 | Editor visual de layouts del widget | Pendiente |
 | 9 | Exportar e importar ajustes, layouts y mensajes personalizados | Pendiente |
 | 10 | Opcionales: Spotify, chat de Kick y YouTube | Pendiente |

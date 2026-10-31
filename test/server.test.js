@@ -51,6 +51,7 @@ test('GET /api/state devuelve la cola vacía al arrancar', async () => {
       current: null,
       queue: [],
       volume: 50,
+      paused: false,
       fallback: { active: false, mode: 'sequential', includeLibrary: false },
     });
   } finally {
@@ -157,6 +158,72 @@ test('playback.volume actualiza el volumen en todos los clientes y rechaza valor
 
     client.socket.close();
     other.socket.close();
+  } finally {
+    await server.close();
+  }
+});
+
+test('playback.pause pausa y reanuda para todos los paneles, se rearma al cambiar de pista y rechaza valores no válidos', async () => {
+  const { server, url } = await startServer();
+  try {
+    const client = await connect(url);
+    const other = await connect(url);
+
+    // Sin nada sonando no hay qué pausar.
+    client.socket.send(JSON.stringify({ type: 'playback.pause', paused: true }));
+    client.socket.send(JSON.stringify({ type: 'queue.add', url: ID_A }));
+    client.socket.send(JSON.stringify({ type: 'queue.add', url: ID_B }));
+    await other.waitFor((m) => m.type === 'state' && m.data.queue.length === 1);
+    assert.ok(other.messages.every((m) => m.type !== 'state' || m.data.paused === false));
+
+    client.socket.send(JSON.stringify({ type: 'playback.pause', paused: true }));
+    assert.equal((await other.waitFor((m) => m.type === 'state' && m.data.paused)).data.current.videoId, ID_A);
+
+    client.socket.send(JSON.stringify({ type: 'playback.pause', paused: 'sí' }));
+    assert.equal((await client.waitFor((m) => m.type === 'error')).key, 'errors.invalidMessage');
+
+    client.socket.send(JSON.stringify({ type: 'playback.pause', paused: false }));
+    const pausedAt = other.messages.findIndex((m) => m.type === 'state' && m.data.paused);
+    await other.waitFor((m) => m.type === 'state' && !m.data.paused && other.messages.indexOf(m) > pausedAt);
+
+    // Pasar a la siguiente pista con la actual en pausa vuelve a sonar.
+    client.socket.send(JSON.stringify({ type: 'playback.pause', paused: true }));
+    client.socket.send(JSON.stringify({ type: 'playback.next' }));
+    const next = await other.waitFor((m) => m.type === 'state' && m.data.current?.videoId === ID_B);
+    assert.equal(next.data.paused, false);
+
+    client.socket.close();
+    other.socket.close();
+  } finally {
+    await server.close();
+  }
+});
+
+test('diagnostics.get responde solo al que pregunta, con el recuento de paneles y widgets y sin claves ni rutas', async () => {
+  const { server, url } = await startServer();
+  try {
+    const client = await connect(url);
+    const other = await connect(url);
+    const widget = await connect(`${url}?view=widget`);
+
+    client.socket.send(JSON.stringify({ type: 'diagnostics.get' }));
+    const { data } = await client.waitFor((m) => m.type === 'diagnostics');
+
+    assert.deepEqual(Object.keys(data).sort(), ['panels', 'twitch', 'uptime', 'version', 'widgets', 'youtubeKey']);
+    assert.equal(data.panels, 2);
+    assert.equal(data.widgets, 1);
+    assert.equal(data.youtubeKey, false);
+    assert.equal(data.twitch, 'disabled');
+    assert.match(data.version, /^\d+\.\d+\.\d+/);
+    assert.ok(Number.isInteger(data.uptime) && data.uptime >= 0);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(other.messages.some((m) => m.type === 'diagnostics'), false);
+    assert.equal(widget.messages.some((m) => m.type === 'diagnostics'), false);
+
+    client.socket.close();
+    other.socket.close();
+    widget.socket.close();
   } finally {
     await server.close();
   }

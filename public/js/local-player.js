@@ -22,6 +22,14 @@ export function createLocalPlayer({ element, onEnded, onUnavailable, onBlocked }
       element.load();
       element.hidden = true;
     },
+    pause() {
+      element.pause();
+    },
+    resume() {
+      element.play().catch((error) => {
+        if (error.name === 'NotAllowedError') onBlocked();
+      });
+    },
     setVolume(volume) {
       element.volume = volume / 100;
     },
