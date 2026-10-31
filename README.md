@@ -122,7 +122,7 @@ La petición de un viewer no interrumpe la canción de la lista base que está s
 | `!voteskip` | Todos | Un voto por usuario y canción; salta al llegar al umbral |
 | `!wrongsong` | Todos | Retira tu última petición |
 | `!skip` | Moderadores | Salta la canción actual |
-| `!volume [0-100]` | Todos consultan, moderadores cambian | Consulta o ajusta el volumen |
+| `!volume [0-100]` | Todos consultan, moderadores/VIPs/suscriptores cambian | Consulta o ajusta el volumen |
 
 **Búsqueda en la biblioteca desde el chat.** Para que un texto corto no acabe en la pista equivocada, si una palabra solo coincide con una etiqueta de **menos de 10 caracteres** (un título corto, una nota o el nombre del archivo), hace falta que otra palabra coincida con el **artista o el álbum**. Con dos pistas llamadas «Love», `!sr love` no encuentra ninguna y `!sr love beatles` encuentra la de Beatles. El panel no aplica esta regla.
 

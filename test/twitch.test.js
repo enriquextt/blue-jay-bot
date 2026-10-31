@@ -25,7 +25,7 @@ test('parseIrcLine entiende PING sin etiquetas ni prefijo', () => {
   assert.equal(parsed.trailing, 'tmi.twitch.tv');
 });
 
-test('toChatMessage normaliza el mensaje y detecta moderadores y propietario', () => {
+test('toChatMessage normaliza el mensaje y detecta moderadores, propietario, VIPs y suscriptores', () => {
   const line = (tags) => `@${tags} :ana!ana@ana.tmi.twitch.tv PRIVMSG #canal :!skip`;
 
   assert.deepEqual(toChatMessage(parseIrcLine(line('mod=0;badges='))), {
@@ -33,6 +33,9 @@ test('toChatMessage normaliza el mensaje y detecta moderadores y propietario', (
   });
   assert.equal(toChatMessage(parseIrcLine(line('mod=1;badges=moderator/1'))).isMod, true);
   assert.equal(toChatMessage(parseIrcLine(line('mod=0;badges=broadcaster/1'))).isMod, true);
+  assert.equal(toChatMessage(parseIrcLine(line('mod=0;badges=vip/1'))).isMod, true);
+  assert.equal(toChatMessage(parseIrcLine(line('mod=0;subscriber=1;badges=subscriber/6'))).isMod, true);
+  assert.equal(toChatMessage(parseIrcLine(line('mod=0;badges=premium/1'))).isMod, false);
 });
 
 test('toChatMessage ignora lo que no es un mensaje de chat', () => {

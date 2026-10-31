@@ -40,7 +40,7 @@ test('un texto personalizado sustituye al original solo en su idioma y se puede 
   assert.equal(messages.text('en', 'chat.sr.added'), find(messages, added).forms[0].defaults.en);
 
   assert.equal(messages.setText('es', added, ''), true);
-  assert.match(t(added, { user: 'ana', title: 'Canción', position: 3 }), /añadida en la posición 3/);
+  assert.match(t(added, { user: 'ana', title: 'Canción', position: 3 }), /añadida: es la número #3 en la lista/);
   assert.deepEqual(find(messages, added).forms[0].custom, {});
 });
 
@@ -77,7 +77,7 @@ test('se rechazan textos largos, con variables ajenas o con otra sintaxis de i18
   assert.equal(set(42), false);
   assert.equal(messages.setText('es', 'chat.no.existe', 'Hola'), false);
   assert.equal(messages.setText('fr', 'chat.sr.added', 'Hola'), false);
-  assert.match(t('chat.sr.added', { user: 'ana', title: 'T', position: 1 }), /añadida en la posición 1/);
+  assert.match(t('chat.sr.added', { user: 'ana', title: 'T', position: 1 }), /añadida: es la número #1 en la lista/);
   assert.equal(set('x'.repeat(MAX_LENGTH)), true);
 });
 

@@ -41,7 +41,7 @@ Leyenda de la columna de decisión:
 - [x] `!voteskip` para votar saltar la canción — **Mantener**
 - [x] `!skip` para saltar la canción — **Mantener**
 - [x] `!wrongsong` para retirar una petición propia — **Mantener**
-- [x] `!volume` para ajustar el volumen — **Mantener** (solo moderadores)
+- [x] `!volume` para ajustar el volumen — **Mantener** (solo moderadores, VIPs y suscriptores)
 - [x] Respuestas del bot en el idioma configurado — **Mantener**
 - [ ] Respuesta al mismo canal de origen (Twitch, Kick o YouTube) en multistream — **Adaptar**
 - [ ] Recompensas de canal de Twitch y Kick que disparan `!sr` — **Adaptar**

@@ -33,7 +33,7 @@ test('!sr añade la canción, avisa del cambio y responde con la posición', asy
   const { queue, changes, say } = await setup();
 
   assert.match(await say('ana', `!sr ${ID_A}`), /suena ahora/);
-  assert.match(await say('ana', `!SR https://youtu.be/${ID_B}`), /posición 1/);
+  assert.match(await say('ana', `!SR https://youtu.be/${ID_B}`), /número #1 en la lista/);
   assert.equal(changes.count, 2);
   assert.equal(queue.snapshot().queue[0].requestedBy, 'twitch:ana');
 });
@@ -138,7 +138,7 @@ test('!skip solo lo pueden usar los moderadores', async () => {
   await say('ana', `!sr ${ID_A}`);
   await say('ana', `!sr ${ID_B}`);
 
-  assert.match(await say('ana', '!skip'), /solo los moderadores/);
+  assert.match(await say('ana', '!skip'), /solo moderadores, VIPs y suscriptores/);
   assert.equal(queue.snapshot().current.videoId, ID_A);
 
   assert.match(await say('mod', '!skip', true), /Saltada/);
@@ -181,7 +181,7 @@ test('!volume consulta para todos y ajusta solo para moderadores', async () => {
   const { queue, say } = await setup();
 
   assert.match(await say('ana', '!volume'), /50%/);
-  assert.match(await say('ana', '!volume 20'), /solo los moderadores/);
+  assert.match(await say('ana', '!volume 20'), /solo moderadores, VIPs y suscriptores/);
   assert.match(await say('mod', '!volume 20', true), /20%/);
   assert.equal(queue.snapshot().volume, 20);
 
@@ -248,7 +248,7 @@ test('!sr busca primero en la biblioteca local y no consulta YouTube si hay coin
   assert.equal(queue.snapshot().current.requestedBy, 'twitch:ana');
   assert.deepEqual(youtubeSearches, []);
 
-  assert.match(await say('ana', '!sr tema sin artista'), /«Tema sin artista» añadida en la posición 1/);
+  assert.match(await say('ana', '!sr tema sin artista'), /«Tema sin artista» añadida: es la número #1 en la lista/);
 });
 
 test('!sr consulta YouTube si la biblioteca local no tiene nada parecido, y los enlaces no pasan por la biblioteca', async () => {
@@ -381,7 +381,7 @@ test('el límite por usuario cuenta la canción que suena y la cola, y se libera
   assert.equal(queue.snapshot().queue.length, 1);
   assert.equal(logged.at(-1).outcome, 'limit_user');
 
-  assert.match(await say('bea', `!sr ${ID_C}`), /posición 2/);
+  assert.match(await say('bea', `!sr ${ID_C}`), /número #2 en la lista/);
 
   queue.advance();
   assert.match(await say('ana', `!sr ${ID_A}`), /añadida/);

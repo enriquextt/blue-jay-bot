@@ -59,11 +59,11 @@
     "replacedByLocal": "“{{title}}” could not be played; the local version “{{replacement}}” plays instead."
   },
   "chat": {
-    "noPermission": "@{{user}}, only moderators can use that command.",
+    "noPermission": "@{{user}}, only moderators, VIPs and subscribers can use that command.",
     "sr": {
       "usage": "@{{user}}, use !sr followed by a YouTube link or the song name.",
       "invalid": "@{{user}}, that YouTube link is not valid.",
-      "added": "@{{user}}, \"{{title}}\" added at position {{position}}.",
+      "added": "@{{user}}, \"{{title}}\" added: it is number #{{position}} in the list.",
       "playingNow": "@{{user}}, \"{{title}}\" is playing now.",
       "searchDisabled": "@{{user}}, search by title is not enabled; use a YouTube link.",
       "notFound": "@{{user}}, I found no song for \"{{query}}\".",

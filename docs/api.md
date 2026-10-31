@@ -215,7 +215,7 @@ Cada adaptador (`server/chat/`) entrega al núcleo:
 ```
 
 - `user` es el nombre de usuario en minúsculas.
-- `isMod` es `true` para moderadores y para el propietario del canal.
+- `isMod` es `true` para moderadores, VIPs, suscriptores y el propietario del canal (quienes pueden usar `!skip` y cambiar el volumen).
 - El adaptador envía de vuelta el texto de respuesta; el núcleo ya lo entrega traducido (claves `chat.*` de `public/locales/`, idioma de la variable `LANGUAGE`, por defecto `es`).
 
 ### 6.2 Comandos
@@ -229,7 +229,7 @@ Cada adaptador (`server/chat/`) entrega al núcleo:
 | `!voteskip` | Todos | Un voto por usuario y canción. Salta al llegar a `VOTE_SKIP_THRESHOLD` (por defecto 3) |
 | `!wrongsong` | Todos | Retira la última petición del propio usuario |
 | `!skip` | Moderadores | Salta la canción actual |
-| `!volume [0-100]` | Todos para consultar, moderadores para cambiar | Consulta o ajusta el volumen |
+| `!volume [0-100]` | Todos para consultar, moderadores/VIPs/suscriptores para cambiar | Consulta o ajusta el volumen |
 
 **Búsqueda estricta (`!sr` y `!local`).** Para que un texto corto del chat no acabe en la pista equivocada, una palabra que solo aparece en textos de **menos de 10 caracteres** (un título corto, una nota —comentario, descripción o subtítulo— corta o el nombre del archivo) no vale por sí sola: hace falta que otra palabra de la búsqueda coincida con el **artista o el álbum**. Las coincidencias en el artista o el álbum no tienen restricción, y un título o una nota de 10 o más caracteres valen solos. El nombre del archivo nunca cuenta como largo. Por ejemplo, con dos pistas llamadas «Love», `!sr love` no encuentra ninguna, y `!sr love beatles` encuentra la de Beatles. Si no hay coincidencia, `!sr` pregunta a YouTube y `!local` sugiere añadir el artista o el álbum.
 

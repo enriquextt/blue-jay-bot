@@ -59,11 +59,11 @@
     "replacedByLocal": "«{{title}}» no se pudo reproducir; suena la versión local «{{replacement}}»."
   },
   "chat": {
-    "noPermission": "@{{user}}, solo los moderadores pueden usar ese comando.",
+    "noPermission": "@{{user}}, solo moderadores, VIPs y suscriptores pueden usar ese comando.",
     "sr": {
       "usage": "@{{user}}, usa !sr seguido de un enlace de YouTube o del nombre de la canción.",
       "invalid": "@{{user}}, ese enlace de YouTube no es válido.",
-      "added": "@{{user}}, «{{title}}» añadida en la posición {{position}}.",
+      "added": "@{{user}}, «{{title}}» añadida: es la número #{{position}} en la lista.",
       "playingNow": "@{{user}}, «{{title}}» suena ahora.",
       "searchDisabled": "@{{user}}, la búsqueda por título no está activada; usa un enlace de YouTube.",
       "notFound": "@{{user}}, no encontré ninguna canción para «{{query}}».",

@@ -60,8 +60,10 @@ export function toChatMessage(parsed) {
   if (parsed.trailing.length > MAX_INCOMING_LENGTH) return null;
 
   const user = parsed.prefix.split('!')[0];
-  const isBroadcaster = parsed.tags.badges?.split(',').some((badge) => badge.startsWith('broadcaster/')) ?? false;
-  const isMod = isBroadcaster || parsed.tags.mod === '1';
+  const badges = (parsed.tags.badges ?? '').split(',').map((badge) => badge.split('/')[0]);
+  // `isMod` da acceso a los comandos de control: moderadores, propietario, VIPs y suscriptores.
+  const isMod = parsed.tags.mod === '1' || parsed.tags.subscriber === '1'
+    || ['broadcaster', 'moderator', 'vip', 'subscriber', 'founder'].some((badge) => badges.includes(badge));
   return { platform: 'twitch', user, text: parsed.trailing, isMod };
 }
 
