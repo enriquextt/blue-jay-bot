@@ -19,7 +19,7 @@ import { PlaybackQueue } from './queue/playback-queue.js';
 import { Settings } from './settings/settings.js';
 import { PlayerState } from './state/player-state.js';
 import { trackKey } from './tracks.js';
-import { AssetError, ASSET_LIMITS, WidgetAssets } from './widget/assets.js';
+import { AssetError, ASSET_LIMITS, ASSET_TYPES, WidgetAssets } from './widget/assets.js';
 import { WidgetLayouts } from './widget/layouts.js';
 import { createChannel, LOOPBACK_ADDRESSES } from './ws/channel.js';
 import { fetchPlaylistVideos, fetchVideoInfo, fetchVideoTitle, searchVideoId } from './youtube/youtube.js';
@@ -128,11 +128,11 @@ export async function createServer({
     return reply.sendFile(relPath, library.root);
   });
 
-  // Imágenes del widget. Se suben con el cuerpo en bruto (sin `multipart`, para no añadir dependencias) y solo desde el
+  // Imágenes y fuentes del widget. Se suben con el cuerpo en bruto (sin `multipart`, para no añadir dependencias) y solo desde el
   // propio equipo; el tipo se decide por los bytes del archivo, no por lo que declare quien lo sube.
-  app.addContentTypeParser(['image/png', 'image/jpeg', 'image/gif', 'image/webp'], { parseAs: 'buffer', bodyLimit: ASSET_LIMITS.imageBytes }, (request, body, done) => done(null, body));
+  app.addContentTypeParser(ASSET_TYPES, { parseAs: 'buffer', bodyLimit: Math.max(ASSET_LIMITS.imageBytes, ASSET_LIMITS.fontBytes) }, (request, body, done) => done(null, body));
 
-  app.post('/api/widget/assets', { bodyLimit: ASSET_LIMITS.imageBytes }, async (request, reply) => {
+  app.post('/api/widget/assets', { bodyLimit: Math.max(ASSET_LIMITS.imageBytes, ASSET_LIMITS.fontBytes) }, async (request, reply) => {
     // Una página de otro sitio no puede subir archivos: el navegador manda su origen y tiene que ser el nuestro.
     const { origin } = request.headers;
     if (!LOOPBACK_ADDRESSES.has(request.ip) || (origin && origin !== `http://${request.headers.host}`)) {

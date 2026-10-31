@@ -917,3 +917,14 @@ input.number:disabled {
   flex: none;
   padding: 6px 10px;
 }
+
+.we-group {
+  display: grid;
+  gap: 6px;
+}
+
+.we-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}

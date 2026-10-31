@@ -73,7 +73,7 @@ Ruta: `ws://<host>/ws`. Todos los cambios de estado se difunden a todos los clie
 | `playlist.created` | `id` | Respuesta a `playlist.create`. Solo llega al cliente que lo pidió, después del mensaje `playlists` que ya incluye la lista nueva |
 | `widget.layouts` | `data`: `{ active, layouts }` | Al conectar y después de cada cambio de layouts. `layouts` son todos, los de serie primero (`builtin: true`, solo lectura) y los propios después; cada uno es `{ id, builtin, name, canvas, showSeconds, idleOpacity, elements }` (ver sección 3.4) |
 | `widget.layout.saved` | `id` | Respuesta a `widget.layout.save` y `widget.layout.duplicate`. Solo llega al cliente que lo pidió, después del mensaje `widget.layouts` que ya incluye el layout |
-| `widget.assets` | `data`: `[{ id, name, type, size }]` | Al conectar y después de subir o borrar una imagen del widget (ver sección 3.4) |
+| `widget.assets` | `data`: `[{ id, name, type, size }]` | Al conectar y después de subir o borrar una imagen o fuente del widget (ver sección 3.5). `type` es el tipo MIME (`image/png`, `font/woff2`…) |
 | `history.changed` | — | Al conectar y cada vez que cambia algún historial. No lleva datos: el cliente vuelve a pedir lo que está mirando con `history.query` |
 | `history.results` | `kind`, `seq`, `total`, `items` | Respuesta a `history.query`. Solo llega al cliente que preguntó; `seq` es el que envió |
 | `notice` | `key`, `params?` | Aviso informativo (por ejemplo, saltada una canción no disponible) |
@@ -121,7 +121,7 @@ Ejemplo de aviso:
 | `widget.layout.duplicate` | `id`, `name` | Copia un layout, también uno de serie, con otro nombre. Responde `widget.layout.saved`. Si no existe: `errors.layoutNotFound`; sin `name` de texto: `errors.invalidMessage`; con un nombre no válido o el tope alcanzado: `errors.layoutInvalid` |
 | `widget.layout.delete` | `id` | Borra un layout propio. Si era el activo, el activo pasa a ser el Clásico. Uno de serie o desconocido: `errors.layoutNotFound` |
 | `widget.layout.activate` | `id` | Elige el layout que usan los widgets que no piden uno con `?layout=`. Desconocido: `errors.layoutNotFound` |
-| `widget.asset.delete` | `id` | Borra una imagen subida y difunde `widget.assets`. Si no existe: `errors.assetNotFound`; si algún layout la usa: `errors.assetInUse` |
+| `widget.asset.delete` | `id` | Borra una imagen o fuente subida y difunde `widget.assets`. Si no existe: `errors.assetNotFound`; si algún layout la usa: `errors.assetInUse` |
 | `history.query` | `kind` (`requests` o `plays`), `seq?`, `user?` (texto contenido en el usuario, máximo 50 caracteres), `outcome?` (solo peticiones; ver sección 6.5), `from?` / `to?` (milisegundos, ambos incluidos), `offset?` (por defecto 0), `limit?` (por defecto 50, máximo 500) | Devuelve `history.results` con lo más reciente primero. En `requests`, cada ítem es `{ id, createdAt, platform, user, command, input, kind, outcome, track }`; en `plays`, `{ id, playedAt, origin, requestedBy, track }`. `track` es `null` si la petición se rechazó antes de elegir una canción. `user` filtra por el usuario (`requests`) o por quien pidió la canción (`plays`) |
 | `history.delete` | `kind`, `id` (entero) | Borra una fila del historial |
 | `history.clear` | `kind` | Vacía ese historial; el otro no se toca |
@@ -166,8 +166,8 @@ Reglas de la lista base:
 | `errors.layoutNotFound` | El layout del widget ya no existe, o es de serie y no se puede borrar |
 | `errors.assetNotFound` | La imagen del widget ya no existe |
 | `errors.assetInUse` | Se intentó borrar una imagen que usa algún layout |
-| `errors.assetInvalid` | El archivo subido no es PNG, JPEG, WebP ni GIF (HTTP 400 o 415) |
-| `errors.assetTooLarge` | La imagen pesa más de 2 MB (HTTP 413) |
+| `errors.assetInvalid` | El archivo subido no es PNG, JPEG, WebP, GIF, WOFF2, TTF ni OTF (HTTP 400 o 415) |
+| `errors.assetTooLarge` | La imagen pesa más de 2 MB o la fuente más de 1 MB (HTTP 413) |
 | `errors.assetLimit` | Ya hay 50 imágenes o 50 MB (HTTP 409) |
 | `errors.queueEmpty` | Se intentó guardar la cola y no hay nada sonando ni pendiente |
 | `errors.serverError` | Error interno inesperado |
@@ -190,7 +190,10 @@ Layout:
 { id, builtin, name, canvas: { width, height }, showSeconds, idleOpacity, elements: [Element] }
 
 Element { id, type, x, y, width, height, visible, locked, rotation, opacity, ...propiedades del tipo }
-  text      template, color, fontSize, fontWeight, align, valign, maxLines
+  text      template, color, fontSize, fontWeight, align, valign, maxLines,
+            fontFamily, italic, uppercase, lineHeight (0,8–3), letterSpacing (px, -5–50),
+            overflow (clamp | marquee), gradient (null o { angle, stops }, como en un relleno),
+            outline { width (0–20), color }, shadow { enabled, x, y, blur, color }
   progress  color, track, radius
   disc      accent
   box, image  shape, fill, border, shadow (ver abajo; `image` es una caja con relleno de imagen por defecto)
@@ -213,20 +216,21 @@ shadow  { enabled, x, y (±200), blur (0–100), color }
 - `template` (máximo 200 caracteres, una línea) admite las variables `{title}`, `{artist}`, `{requester}`, `{meta}`, `{position}`, `{duration}` y `{remaining}`. `{requester}` y `{meta}` (artista y quién la pidió) salen traducidos con el `?lang=` del widget. Una variable desconocida se deja tal cual.
 - Un campo ausente toma su valor por defecto; uno presente y no válido invalida todo el layout. Los campos desconocidos se descartan y nunca se admite CSS ni HTML libre: el widget pinta el texto con `textContent`.
 - Los layouts de serie (`builtin: true`, hoy solo `classic`) no se modifican ni se borran; se duplican para editarlos. Los propios, hasta 30, se guardan en la tabla `kv` (`widget.layouts` y `widget.active`).
+- `fontFamily` es una clave del catálogo (`system`, `inter`, `montserrat`, `oswald`, `playfair-display`, `jetbrains-mono`, `bebas-neue`, `pacifico` o `press-start-2p`; las fuentes están en `public/fonts/` con su licencia) o el id de una fuente subida. Nunca un nombre de fuente ni CSS libre. Con `overflow: "clamp"` el texto se recorta con «…» a `maxLines` líneas; con `"marquee"` va en una sola línea y, si no cabe, se desplaza de un extremo al otro con una pausa. Con `gradient`, el degradado sustituye a `color`.
 - Un campo de `shape`, `fill`, `border` o `shadow` que falte toma su valor por defecto (sin borde, sin sombra, rectángulo y, en `box`, color sólido). Un `id` de imagen (32 caracteres hexadecimales) que no exista hace que el layout no se guarde.
 - El lienzo se escala por igual para caber en la fuente de navegador y queda anclado arriba a la izquierda.
 - Con `?idle=<0..1>` en la dirección, el widget ignora `idleOpacity` del layout.
 
-### 3.5 Imágenes del widget
+### 3.5 Imágenes y fuentes del widget
 
-Las imágenes que usan los layouts se suben por HTTP, no por WebSocket (el cuerpo es binario):
+Las imágenes y fuentes que usan los layouts se suben por HTTP, no por WebSocket (el cuerpo es binario):
 
 | Ruta | Descripción |
 |---|---|
-| `POST /api/widget/assets` | Cuerpo en bruto con `Content-Type` `image/png`, `image/jpeg`, `image/gif` o `image/webp`; el nombre original, codificado con `encodeURIComponent`, va en `X-Filename`. Responde `200` con `{ id, name, type, size }` (si ya existía el mismo contenido, devuelve el existente). `400`: los bytes no son una imagen admitida, aunque la cabecera diga lo contrario. `403`: la petición no viene del propio equipo o su `Origin` no es el del servidor. `409`: ya hay 50 imágenes o 50 MB. `413`: más de 2 MB. `415`: otro tipo de contenido (por ejemplo, `image/svg+xml`) |
+| `POST /api/widget/assets` | Cuerpo en bruto con `Content-Type` `image/png`, `image/jpeg`, `image/gif`, `image/webp`, `font/woff2`, `font/ttf` o `font/otf`; el nombre original, codificado con `encodeURIComponent`, va en `X-Filename`. Responde `200` con `{ id, name, type, size }` (si ya existía el mismo contenido, devuelve el existente). `400`: los bytes no son una imagen admitida, aunque la cabecera diga lo contrario. `403`: la petición no viene del propio equipo o su `Origin` no es el del servidor. `409`: ya hay 50 imágenes o 50 MB. `413`: más de 2 MB (1 MB si es una fuente). `415`: otro tipo de contenido (por ejemplo, `image/svg+xml`) |
 | `GET /widget-assets/:id` | Entrega la imagen con su tipo, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox` y `Cache-Control: public, max-age=31536000, immutable`. `404` si el id no existe o no tiene el formato de un id |
 
-El id es el SHA-256 del contenido, recortado a 32 caracteres hexadecimales. El archivo se guarda como `data/widget-assets/<id>.<ext>` y nunca se usa un nombre ni una ruta del cliente. Se admiten PNG, JPEG, GIF y WebP; SVG no, porque podría llevar scripts.
+El id es el SHA-256 del contenido, recortado a 32 caracteres hexadecimales. El archivo se guarda como `data/widget-assets/<id>.<ext>` y nunca se usa un nombre ni una ruta del cliente. Se admiten PNG, JPEG, GIF y WebP, y las fuentes WOFF2, TTF y OTF; SVG no, porque podría llevar scripts. El tipo lo decide el contenido, no la cabecera: unos bytes de PNG enviados como `font/woff2` se guardan como imagen. Una fuente subida solo la interpreta el navegador del que la abre (el panel o OBS); por eso, como las imágenes, solo se acepta desde el propio equipo.
 
 ## 4. Modelo de datos de una canción
 

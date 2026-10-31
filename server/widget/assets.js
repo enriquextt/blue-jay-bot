@@ -8,6 +8,7 @@ export const ASSET_LIMITS = {
   count: 50,
   totalBytes: 50 * 1024 * 1024,
   imageBytes: 2 * 1024 * 1024,
+  fontBytes: 1024 * 1024,
   nameLength: 60,
 };
 
@@ -15,16 +16,26 @@ const KEY = 'widget.assets';
 
 // Tipos admitidos y cómo reconocerlos por sus primeros bytes: ni la extensión ni la cabecera `Content-Type` valen,
 // las pone quien sube el archivo. SVG queda fuera a propósito: podría llevar scripts si se abriera como página.
+// Las fuentes (WOFF2, TTF y OTF) las interpreta el navegador, con el riesgo de cualquier archivo que se abre: solo
+// se suben desde el propio equipo.
 const SIGNATURES = [
   { type: 'image/png', ext: 'png', matches: (b) => b.length > 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
   { type: 'image/jpeg', ext: 'jpg', matches: (b) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
   { type: 'image/gif', ext: 'gif', matches: (b) => b.length > 6 && ['GIF87a', 'GIF89a'].includes(b.subarray(0, 6).toString('latin1')) },
   { type: 'image/webp', ext: 'webp', matches: (b) => b.length > 12 && b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP' },
+  { type: 'font/woff2', ext: 'woff2', matches: (b) => b.length > 4 && b.subarray(0, 4).toString('latin1') === 'wOF2' },
+  { type: 'font/ttf', ext: 'ttf', matches: (b) => b.length > 4 && (b.subarray(0, 4).equals(Buffer.from([0, 1, 0, 0])) || b.subarray(0, 4).toString('latin1') === 'true') },
+  { type: 'font/otf', ext: 'otf', matches: (b) => b.length > 4 && b.subarray(0, 4).toString('latin1') === 'OTTO' },
 ];
 
-export function detectImage(buffer) {
+// El tipo de archivo (imagen o fuente) según sus primeros bytes, o null si no es uno admitido.
+export function detectAsset(buffer) {
   return SIGNATURES.find((signature) => signature.matches(buffer)) ?? null;
 }
+
+export const ASSET_TYPES = SIGNATURES.map((signature) => signature.type);
+
+const kindOf = (type) => type.split('/')[0];
 
 // El nombre original solo se muestra en el editor: se limpia y se recorta.
 function cleanName(name) {
@@ -59,15 +70,16 @@ export class WidgetAssets extends EventEmitter {
     return this.#items.map(({ id, name, type, size }) => ({ id, name, type, size }));
   }
 
-  has(id) {
-    return this.#items.some((item) => item.id === id);
+  // Si existe; con `kind` (`image` o `font`), solo si es de ese tipo.
+  has(id, kind = null) {
+    return this.#items.some((item) => item.id === id && (kind === null || kindOf(item.type) === kind));
   }
 
-  // Guarda una imagen. Lanza `AssetError` con `invalid` (no es una imagen admitida), `tooLarge` o `limit`.
+  // Guarda una imagen o una fuente. Lanza `AssetError` con `invalid` (no es un archivo admitido), `tooLarge` o `limit`.
   async add(buffer, name) {
-    const image = Buffer.isBuffer(buffer) ? detectImage(buffer) : null;
+    const image = Buffer.isBuffer(buffer) ? detectAsset(buffer) : null;
     if (!image) throw new AssetError('invalid');
-    if (buffer.length > ASSET_LIMITS.imageBytes) throw new AssetError('tooLarge');
+    if (buffer.length > (kindOf(image.type) === 'font' ? ASSET_LIMITS.fontBytes : ASSET_LIMITS.imageBytes)) throw new AssetError('tooLarge');
 
     const id = createHash('sha256').update(buffer).digest('hex').slice(0, 32);
     const existing = this.#items.find((item) => item.id === id);

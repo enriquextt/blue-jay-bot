@@ -53,11 +53,11 @@
     "messageInvalid": "El texto no es válido: máximo 400 caracteres y solo las variables que ya tiene ese mensaje.",
     "layoutInvalid": "El layout del widget no es válido o ya hay demasiados.",
     "layoutNotFound": "Ese layout del widget ya no existe.",
-    "assetNotFound": "Esa imagen ya no existe.",
-    "assetInUse": "Esa imagen la usa algún layout: quítala de ellos antes de borrarla.",
-    "assetInvalid": "El archivo no es una imagen admitida (PNG, JPEG, WebP o GIF).",
-    "assetTooLarge": "La imagen pesa más de 2 MB.",
-    "assetLimit": "Ya hay demasiadas imágenes (50) o ocupan demasiado (50 MB)."
+    "assetNotFound": "Ese archivo ya no existe.",
+    "assetInUse": "Algún layout usa ese archivo: quítalo de ellos antes de borrarlo.",
+    "assetInvalid": "El archivo no es una imagen o fuente admitida (PNG, JPEG, WebP, GIF, WOFF2, TTF u OTF).",
+    "assetTooLarge": "El archivo es demasiado grande: 2 MB las imágenes y 1 MB las fuentes.",
+    "assetLimit": "Ya hay demasiados archivos subidos (50) o ocupan demasiado (50 MB)."
   },
   "notices": {
     "skippedUnavailable": "Saltada, no disponible: {{title}}",
@@ -398,7 +398,26 @@
     },
     "shadowSection": "Sombra",
     "shadowEnabled": "Activar sombra",
-    "shadowBlur": "Desenfoque"
+    "shadowBlur": "Desenfoque",
+    "fontSection": "Fuente y estilo",
+    "fontFamily": "Fuente",
+    "fontSystem": "Sistema",
+    "fontUploaded": "(subida)",
+    "uploadFont": "Subir fuente…",
+    "deleteFont": "Borrar fuente",
+    "italic": "Cursiva",
+    "uppercase": "Mayúsculas",
+    "lineHeight": "Interlineado",
+    "letterSpacing": "Espaciado de letras",
+    "overflow": "Si no cabe",
+    "overflowKind": {
+      "clamp": "Recortar con «…»",
+      "marquee": "Desplazar como un rótulo"
+    },
+    "textColorSection": "Color del texto",
+    "textGradient": "Usar degradado",
+    "outlineSection": "Contorno",
+    "outlineWidth": "Grosor del contorno"
   },
   "widget": {
     "requestedBy": "pedida por {{user}}",

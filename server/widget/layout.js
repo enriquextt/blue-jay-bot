@@ -8,11 +8,13 @@ import {
   FONT_WEIGHTS,
   IMAGE_FITS,
   LIMITS,
+  OVERFLOWS,
   SHAPES,
   SURFACE_TYPES,
   TYPE_DEFAULTS,
   VERTICAL_ALIGNMENTS,
 } from '../../public/js/widget/catalog.js';
+import { FONT_KEYS, isAssetFont } from '../../public/js/widget/fonts.js';
 
 const COLOR = /^#[0-9a-f]{6}([0-9a-f]{2})?$/i;
 const ELEMENT_ID = /^[\w-]{1,32}$/;
@@ -76,7 +78,7 @@ function normalizeFill(input, { hasAsset }) {
       const asset = input.asset ?? null;
       const fit = input.fit ?? 'cover';
       if (!IMAGE_FITS.includes(fit)) return null;
-      if (asset !== null && (typeof asset !== 'string' || !ASSET_ID.test(asset) || (hasAsset && !hasAsset(asset)))) return null;
+      if (asset !== null && (typeof asset !== 'string' || !ASSET_ID.test(asset) || (hasAsset && !hasAsset(asset, 'image')))) return null;
       return { type: 'image', asset, fit };
     }
   }
@@ -100,6 +102,36 @@ function normalizeShadow(input, defaults) {
   return valid ? { enabled: shadow.enabled, x: shadow.x, y: shadow.y, blur: shadow.blur, color: shadow.color } : null;
 }
 
+// Un texto guarda una fuente del catálogo o el id de una fuente subida, nunca un nombre de CSS libre.
+function normalizeFont(value, { hasAsset }) {
+  if (FONT_KEYS.includes(value)) return value;
+  return isAssetFont(value) && (!hasAsset || hasAsset(value, 'font')) ? value : null;
+}
+
+function normalizeGradient(input) {
+  if (input === null) return null;
+  if (!isObject(input)) return undefined;
+
+  const angle = input.angle ?? 90;
+  const stops = normalizeStops(input.stops);
+  return inRange(angle, [0, 360]) && stops ? { angle, stops } : undefined;
+}
+
+function normalizeOutline(input, defaults) {
+  const outline = { ...defaults, ...(isObject(input) ? input : null) };
+  if (input !== undefined && !isObject(input)) return null;
+  return inRange(outline.width, LIMITS.outlineWidth) && isColor(outline.color) ? { width: outline.width, color: outline.color } : null;
+}
+
+function normalizeText(input, element, options) {
+  const defaults = TYPE_DEFAULTS.text;
+  const fontFamily = normalizeFont(input.fontFamily ?? defaults.fontFamily, options);
+  const gradient = normalizeGradient(input.gradient ?? null);
+  const outline = normalizeOutline(input.outline, defaults.outline);
+  const shadow = normalizeShadow(input.shadow, defaults.shadow);
+  return fontFamily && gradient !== undefined && outline && shadow ? { ...element, fontFamily, gradient, outline, shadow } : null;
+}
+
 function normalizeSurface(input, element, options) {
   const defaults = TYPE_DEFAULTS[element.type];
   const shape = normalizeShape(input.shape ?? defaults.shape);
@@ -118,6 +150,11 @@ const TYPE_RULES = {
     align: [null, (value) => ALIGNMENTS.includes(value)],
     valign: [null, (value) => VERTICAL_ALIGNMENTS.includes(value)],
     maxLines: [null, (value) => isInRangeInt(value, LIMITS.maxLines)],
+    italic: [null, (value) => typeof value === 'boolean'],
+    uppercase: [null, (value) => typeof value === 'boolean'],
+    lineHeight: [null, (value) => inRange(value, LIMITS.lineHeight)],
+    letterSpacing: [null, (value) => inRange(value, LIMITS.letterSpacing)],
+    overflow: [null, (value) => OVERFLOWS.includes(value)],
   },
   progress: {
     color: [null, isColor],
@@ -156,7 +193,8 @@ function normalizeElement(input, options) {
     element[key] = value;
   }
 
-  return SURFACE_TYPES.includes(element.type) ? normalizeSurface(input, element, options) : element;
+  if (SURFACE_TYPES.includes(element.type)) return normalizeSurface(input, element, options);
+  return element.type === 'text' ? normalizeText(input, element, options) : element;
 }
 
 // Convierte lo recibido en un layout limpio (sin `id`: lo pone quien lo guarda), o null si algo no es válido.
@@ -181,7 +219,10 @@ export function normalizeLayout(input, { hasAsset = null } = {}) {
   return { name, canvas: { width: canvas.width, height: canvas.height }, showSeconds, idleOpacity, elements };
 }
 
-// Los ids de las imágenes que usa un layout.
+// Los ids de las imágenes y fuentes subidas que usa un layout.
 export function usedAssets(layout) {
-  return layout.elements.flatMap((element) => (element.fill?.type === 'image' && element.fill.asset ? [element.fill.asset] : []));
+  return layout.elements.flatMap((element) => {
+    if (element.fill?.type === 'image' && element.fill.asset) return [element.fill.asset];
+    return isAssetFont(element.fontFamily) ? [element.fontFamily] : [];
+  });
 }

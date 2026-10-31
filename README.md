@@ -166,7 +166,7 @@ data/       Datos locales y credenciales (ignorado por git)
 | 5.5 | Mensajes del bot editables y panel en dos columnas | Hecha |
 | 6 | Widget de OBS | Hecha |
 | 7 | Diagnóstico y controles de reproducción en el panel | Hecha |
-| 8 | Editor visual de layouts del widget | En curso (8.1 a 8.3 hechas: layouts, editor visual, formas, rellenos e imágenes propias) |
+| 8 | Editor visual de layouts del widget | En curso (8.1 a 8.4 hechas: layouts, editor visual, formas, rellenos, imágenes, fuentes y estilo de texto) |
 | 9 | Exportar e importar ajustes, layouts y mensajes personalizados | Pendiente |
 | 10 | Opcionales: Spotify, chat de Kick y YouTube | Pendiente |
 
@@ -195,3 +195,5 @@ data/       Datos locales y credenciales (ignorado por git)
 ## Licencia
 
 [GPL-3.0](LICENSE).
+
+Las fuentes de `public/fonts/` no son parte del código: tienen su propia licencia (SIL Open Font License 1.1), en el `LICENSE.txt` de cada carpeta.

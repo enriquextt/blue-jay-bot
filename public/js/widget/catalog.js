@@ -17,6 +17,9 @@ export const LIMITS = {
   shadowBlur: [0, 100],
   gradientStops: [2, 4],
   maxLines: [1, 10],
+  lineHeight: [0.8, 3],
+  letterSpacing: [-5, 50],
+  outlineWidth: [0, 20],
   templateLength: 200,
 };
 
@@ -31,6 +34,9 @@ export const TEXT_VARIABLES = ['title', 'artist', 'requester', 'meta', 'position
 export const FONT_WEIGHTS = [400, 500, 600, 700, 800];
 export const ALIGNMENTS = ['left', 'center', 'right'];
 export const VERTICAL_ALIGNMENTS = ['top', 'middle', 'bottom'];
+
+// Qué hace un texto que no cabe: recortar con «…» (hasta `maxLines` líneas) o desplazarse como un rótulo.
+export const OVERFLOWS = ['clamp', 'marquee'];
 
 // Formas y sus variantes (hacia dónde apunta o en qué esquina está). La geometría está en `shapes.js`.
 export const SHAPES = {
@@ -64,12 +70,32 @@ function surfaceDefaults() {
 }
 
 export const TYPE_DEFAULTS = {
-  text: { template: '{title}', color: '#ffffff', fontSize: 16, fontWeight: 400, align: 'left', valign: 'top', maxLines: 1 },
+  text: {
+    template: '{title}',
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 400,
+    align: 'left',
+    valign: 'top',
+    maxLines: 1,
+    fontFamily: 'system',
+    italic: false,
+    uppercase: false,
+    lineHeight: 1.3,
+    letterSpacing: 0,
+    overflow: 'clamp',
+    gradient: null,
+    outline: { width: 0, color: '#000000' },
+    shadow: { enabled: false, x: 0, y: 2, blur: 4, color: '#000000b3' },
+  },
   progress: { color: '#4f8cff', track: '#ffffff2e', radius: 3 },
   disc: { accent: '#4f8cff' },
   box: { ...surfaceDefaults(), fill: { type: 'solid', color: '#12151cd1' } },
   image: { ...surfaceDefaults(), fill: { type: 'image', asset: null, fit: 'cover' } },
 };
+
+// Degradado de un texto al activarlo en el editor.
+export const DEFAULT_TEXT_GRADIENT = { angle: 90, stops: [{ offset: 0, color: '#ffffff' }, { offset: 1, color: '#4f8cff' }] };
 
 // Relleno al cambiar de tipo en el editor.
 export const DEFAULT_FILLS = {

@@ -37,6 +37,32 @@
   overflow-wrap: anywhere;
 }
 
+.text-body.marquee {
+  display: block;
+  white-space: nowrap;
+}
+
+.marquee-text {
+  display: inline-block;
+}
+
+/* Va hasta el final, espera y vuelve (`alternate`); la distancia y la duración las calcula `text.js`. */
+.marquee-text.running {
+  animation: marquee var(--marquee-duration) ease-in-out infinite alternate;
+}
+
+@keyframes marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+
+  88%,
+  100% {
+    transform: translateX(var(--marquee-distance));
+  }
+}
+
 .el.progress {
   overflow: hidden;
 }

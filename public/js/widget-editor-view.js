@@ -13,6 +13,7 @@ import {
   updateElement,
 } from './widget/editor-model.js';
 import { ELEMENT_TYPES } from './widget/catalog.js';
+import { isAssetFont, SYSTEM_FONT } from './widget/fonts.js';
 import { templateValues } from './widget/format.js';
 
 const NUDGE = 1;
@@ -98,7 +99,7 @@ export function createWidgetEditorView({ send, showNotice }) {
       applyToElement(change);
       commit();
     },
-    onUpload: (file) => uploadImage(file),
+    onUpload: (file, kind) => uploadAsset(file, kind),
     onDeleteAsset: (id) => send({ type: 'widget.asset.delete', id }),
     onAlign: (target) => {
       session().draft = alignElement(session().draft, selectedElementId, target);
@@ -128,13 +129,22 @@ export function createWidgetEditorView({ send, showNotice }) {
 
   const UPLOAD_ERRORS = { 400: 'errors.assetInvalid', 403: 'errors.localOnly', 409: 'errors.assetLimit', 413: 'errors.assetTooLarge', 415: 'errors.assetInvalid' };
 
-  // Sube una imagen y la deja elegida en el elemento seleccionado.
-  async function uploadImage(file) {
+  // Las fuentes no tienen un tipo fiable en el navegador (`file.type` suele venir vacío): se pone según la extensión.
+  const FONT_TYPES = { woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf' };
+
+  // Sube una imagen o una fuente y la deja elegida en el elemento seleccionado.
+  async function uploadAsset(file, kind) {
+    const type = kind === 'font' ? FONT_TYPES[file.name.split('.').pop().toLowerCase()] : file.type;
+    if (!type) {
+      showNotice(t('errors.assetInvalid'), 'error');
+      return;
+    }
+
     let response;
     try {
       response = await fetch('/api/widget/assets', {
         method: 'POST',
-        headers: { 'Content-Type': file.type, 'X-Filename': encodeURIComponent(file.name) },
+        headers: { 'Content-Type': type, 'X-Filename': encodeURIComponent(file.name) },
         body: file,
       });
     } catch {
@@ -148,25 +158,27 @@ export function createWidgetEditorView({ send, showNotice }) {
 
     const { id } = await response.json();
     // El servidor avisa de la lista nueva con `widget.assets`; mientras llega, se añade aquí para poder elegirla.
-    if (!assets.some((asset) => asset.id === id)) assets = [...assets, { id, name: file.name, type: file.type, size: file.size }];
+    if (!assets.some((asset) => asset.id === id)) assets = [...assets, { id, name: file.name, type, size: file.size }];
     if (session()) {
-      applyToElement((element) => (element.fill ? { fill: { type: 'image', asset: id, fit: element.fill.type === 'image' ? element.fill.fit : 'cover' } } : {}));
+      applyToElement((element) => {
+        if (kind === 'font') return element.type === 'text' ? { fontFamily: id } : {};
+        return element.fill ? { fill: { type: 'image', asset: id, fit: element.fill.type === 'image' ? element.fill.fit : 'cover' } } : {};
+      });
       commit();
     }
   }
 
-  // Una imagen borrada no puede quedar elegida en un borrador: al guardar el servidor lo rechazaría.
+  // Una imagen o fuente borrada no puede quedar elegida en un borrador: al guardar el servidor lo rechazaría.
   function pruneAssets() {
     const known = new Set(assets.map((asset) => asset.id));
+    const withoutMissing = (element) => {
+      if (element.fill?.type === 'image' && element.fill.asset && !known.has(element.fill.asset)) {
+        return { ...element, fill: { ...element.fill, asset: null } };
+      }
+      return isAssetFont(element.fontFamily) && !known.has(element.fontFamily) ? { ...element, fontFamily: SYSTEM_FONT } : element;
+    };
     for (const current of sessions.values()) {
-      current.draft = {
-        ...current.draft,
-        elements: current.draft.elements.map((element) => (
-          element.fill?.type === 'image' && element.fill.asset && !known.has(element.fill.asset)
-            ? { ...element, fill: { ...element.fill, asset: null } }
-            : element
-        )),
-      };
+      current.draft = { ...current.draft, elements: current.draft.elements.map(withoutMissing) };
     }
   }
 

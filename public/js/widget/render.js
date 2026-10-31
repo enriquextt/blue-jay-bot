@@ -1,7 +1,5 @@
-import { fillTemplate } from './format.js';
 import { buildSurface } from './surface.js';
-
-const JUSTIFY = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
+import { buildText } from './text.js';
 
 // Disco de vinilo. Solo el centro cambia de color, así que el resto es marcado fijo.
 const DISC_MARKUP = `
@@ -23,31 +21,7 @@ const BUILDERS = {
 
   image: (element) => ({ node: buildSurface(element) }),
 
-  text(element) {
-    const node = document.createElement('div');
-    node.style.justifyContent = JUSTIFY[element.valign];
-
-    // El texto siempre entra por `textContent`: una plantilla nunca se interpreta como HTML.
-    const body = document.createElement('div');
-    body.className = 'text-body';
-    Object.assign(body.style, {
-      color: element.color,
-      fontSize: `${element.fontSize}px`,
-      fontWeight: element.fontWeight,
-      textAlign: element.align,
-      webkitLineClamp: element.maxLines,
-      lineClamp: element.maxLines,
-    });
-    node.append(body);
-
-    return {
-      node,
-      update({ values }) {
-        const text = fillTemplate(element.template, values);
-        if (body.textContent !== text) body.textContent = text;
-      },
-    };
-  },
+  text: buildText,
 
   progress(element) {
     const node = document.createElement('div');
@@ -84,6 +58,10 @@ export function createRenderer(container, { idleOpacity = null } = {}) {
 
   let layout = null;
   let updaters = [];
+  let measurers = [];
+
+  // Cuando termina de cargarse una fuente cambia lo que ocupa el texto: los rótulos se miden otra vez.
+  document.fonts?.addEventListener('loadingdone', () => measurers.forEach((measure) => measure()));
 
   function fit() {
     // Con el contenedor oculto (por ejemplo, en una pestaña cerrada) no hay tamaño con el que escalar.
@@ -103,13 +81,14 @@ export function createRenderer(container, { idleOpacity = null } = {}) {
     setLayout(next) {
       layout = next;
       updaters = [];
+      measurers = [];
       stage.replaceChildren();
       stage.style.width = `${layout.canvas.width}px`;
       stage.style.height = `${layout.canvas.height}px`;
       stage.style.setProperty('--idle-opacity', idleOpacity ?? layout.idleOpacity);
 
       for (const element of layout.elements) {
-        const { node, update } = BUILDERS[element.type](element);
+        const { node, update, measure } = BUILDERS[element.type](element);
         node.className = `el ${element.type}`;
         node.dataset.id = element.id;
         Object.assign(node.style, {
@@ -123,6 +102,7 @@ export function createRenderer(container, { idleOpacity = null } = {}) {
         });
         stage.append(node);
         if (update) updaters.push(update);
+        if (measure) measurers.push(measure);
       }
       fit();
     },

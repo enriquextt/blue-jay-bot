@@ -1,0 +1,64 @@
+/* Fuentes empaquetadas (licencia OFL; cada carpeta de public/fonts/ lleva la suya). Solo se descargan las que se usan. */
+@font-face {
+  font-family: 'BJ Inter';
+  src: url('/fonts/inter/inter.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BJ Montserrat';
+  src: url('/fonts/montserrat/montserrat.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BJ Oswald';
+  src: url('/fonts/oswald/oswald.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BJ Playfair Display';
+  src: url('/fonts/playfair-display/playfair-display.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BJ JetBrains Mono';
+  src: url('/fonts/jetbrains-mono/jetbrains-mono.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BJ Bebas Neue';
+  src: url('/fonts/bebas-neue/bebas-neue.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BJ Pacifico';
+  src: url('/fonts/pacifico/pacifico.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BJ Press Start 2P';
+  src: url('/fonts/press-start-2p/press-start-2p.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

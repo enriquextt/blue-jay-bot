@@ -53,11 +53,11 @@
     "messageInvalid": "The text is not valid: 400 characters at most and only the variables that message already has.",
     "layoutInvalid": "The widget layout is not valid, or there are too many.",
     "layoutNotFound": "That widget layout no longer exists.",
-    "assetNotFound": "That image no longer exists.",
-    "assetInUse": "A layout uses that image: remove it from them before deleting it.",
-    "assetInvalid": "The file is not a supported image (PNG, JPEG, WebP or GIF).",
-    "assetTooLarge": "The image is larger than 2 MB.",
-    "assetLimit": "There are too many images (50) or they take too much space (50 MB)."
+    "assetNotFound": "That file no longer exists.",
+    "assetInUse": "A layout uses that file: remove it from them before deleting it.",
+    "assetInvalid": "The file is not a supported image or font (PNG, JPEG, WebP, GIF, WOFF2, TTF or OTF).",
+    "assetTooLarge": "The file is too large: 2 MB for images and 1 MB for fonts.",
+    "assetLimit": "There are too many uploaded files (50) or they take too much space (50 MB)."
   },
   "notices": {
     "skippedUnavailable": "Skipped, unavailable: {{title}}",
@@ -398,7 +398,26 @@
     },
     "shadowSection": "Shadow",
     "shadowEnabled": "Enable shadow",
-    "shadowBlur": "Blur"
+    "shadowBlur": "Blur",
+    "fontSection": "Font and style",
+    "fontFamily": "Font",
+    "fontSystem": "System",
+    "fontUploaded": "(uploaded)",
+    "uploadFont": "Upload font…",
+    "deleteFont": "Delete font",
+    "italic": "Italic",
+    "uppercase": "Uppercase",
+    "lineHeight": "Line height",
+    "letterSpacing": "Letter spacing",
+    "overflow": "If it does not fit",
+    "overflowKind": {
+      "clamp": "Cut off with “…”",
+      "marquee": "Scroll like a ticker"
+    },
+    "textColorSection": "Text color",
+    "textGradient": "Use a gradient",
+    "outlineSection": "Outline",
+    "outlineWidth": "Outline width"
   },
   "widget": {
     "requestedBy": "requested by {{user}}",

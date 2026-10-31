@@ -3,15 +3,18 @@ import {
   ALIGNMENTS,
   BORDER_STYLES,
   DEFAULT_FILLS,
+  DEFAULT_TEXT_GRADIENT,
   FILL_TYPES,
   FONT_WEIGHTS,
   IMAGE_FITS,
   LIMITS,
+  OVERFLOWS,
   SHAPES,
   SHAPE_TYPES,
   TEXT_VARIABLES,
   VERTICAL_ALIGNMENTS,
 } from './widget/catalog.js';
+import { FONT_KEYS, FONTS, SYSTEM_FONT } from './widget/fonts.js';
 import { t } from './i18n.js';
 
 const COLOR = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i;
@@ -118,7 +121,7 @@ function colorInput(value, { onInput, onCommit }) {
 // nuevos o una función que lo calcula con el elemento (o layout) tal como está AHORA: el inspector no se reconstruye
 // al terminar de editar un campo, así que lo que tiene guardado puede estar desfasado. `onRebuild(cambio)` es lo mismo
 // para cambios que alteran los campos que se muestran (otra forma, otro tipo de relleno). `onAlign(destino)` pega al lienzo;
-// `onUpload(archivo)` y `onDeleteAsset(id)` gestionan las imágenes subidas.
+// `onUpload(archivo, tipo)` (`image` o `font`) y `onDeleteAsset(id)` gestionan las imágenes y fuentes subidas.
 export function createInspector({ root, onElement, onLayout, onRebuild, onAlign, onUpload, onDeleteAsset }) {
   function render({ layout, element, assets = [] }) {
     root.replaceChildren();
@@ -238,7 +241,17 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
       );
     }
 
-    const shadowFields = [checkbox(shadow.enabled, t('widgetEditor.shadowEnabled'), {
+    return [
+      section(t('widgetEditor.shapeSection'), ...shapeFields),
+      section(t('widgetEditor.fillSection'), ...fillFields),
+      section(t('widgetEditor.borderSection'), ...borderFields),
+      section(t('widgetEditor.shadowSection'), ...shadowFields(shadow, nested)),
+    ];
+  }
+
+  // Sombra con interruptor: lo usan las superficies (`shadow`) y los textos.
+  function shadowFields(shadow, nested) {
+    const fields = [checkbox(shadow.enabled, t('widgetEditor.shadowEnabled'), {
       onInput: () => {},
       onCommit: () => onRebuild((current) => ({ shadow: { ...current.shadow, enabled: !current.shadow.enabled } })),
     })];
@@ -249,15 +262,9 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
         field('Y', numberInput(shadow.y, LIMITS.shadowOffset, nested('shadow', (current, y) => ({ ...current, y })))),
         field(t('widgetEditor.shadowBlur'), numberInput(shadow.blur, LIMITS.shadowBlur, nested('shadow', (current, blur) => ({ ...current, blur })))),
       );
-      shadowFields.push(grid, field(t('widgetEditor.color'), colorInput(shadow.color, nested('shadow', (current, color) => ({ ...current, color })))));
+      fields.push(grid, field(t('widgetEditor.color'), colorInput(shadow.color, nested('shadow', (current, color) => ({ ...current, color })))));
     }
-
-    return [
-      section(t('widgetEditor.shapeSection'), ...shapeFields),
-      section(t('widgetEditor.fillSection'), ...fillFields),
-      section(t('widgetEditor.borderSection'), ...borderFields),
-      section(t('widgetEditor.shadowSection'), ...shadowFields),
-    ];
+    return fields;
   }
 
   // Al cambiar de tipo de relleno se parte del valor por defecto de ese tipo, salvo la imagen y el ajuste, que se conservan.
@@ -269,10 +276,10 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
     return next;
   }
 
-  function stopsEditor(fill, nested) {
+  function stopsEditor(fill, nested, key = 'fill') {
     const rows = fill.stops.map((stop, index) => {
       const row = node('div', 'we-stop');
-      const update = (build) => nested('fill', (current, value) => ({ ...current, stops: current.stops.map((item, i) => (i === index ? build(item, value) : item)) }));
+      const update = (build) => nested(key, (current, value) => ({ ...current, stops: current.stops.map((item, i) => (i === index ? build(item, value) : item)) }));
       const color = colorInput(stop.color, update((item, value) => ({ ...item, color: value })));
       const offset = numberInput(Math.round(stop.offset * 100), [0, 100], update((item, value) => ({ ...item, offset: value / 100 })));
       offset.title = t('widgetEditor.stopOffset');
@@ -283,7 +290,7 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
       remove.title = t('widgetEditor.removeStop');
       remove.setAttribute('aria-label', t('widgetEditor.removeStop'));
       remove.disabled = fill.stops.length <= LIMITS.gradientStops[0];
-      remove.addEventListener('click', () => onRebuild((current) => ({ fill: { ...current.fill, stops: current.fill.stops.filter((_, i) => i !== index) } })));
+      remove.addEventListener('click', () => onRebuild((current) => ({ [key]: { ...current[key], stops: current[key].stops.filter((_, i) => i !== index) } })));
 
       row.append(color, offset, remove);
       return row;
@@ -293,17 +300,17 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
     add.type = 'button';
     add.disabled = fill.stops.length >= LIMITS.gradientStops[1];
     add.addEventListener('click', () => onRebuild((current) => {
-      const { stops } = current.fill;
+      const { stops } = current[key];
       const last = stops.at(-1);
       // El color nuevo va al final, a medio camino entre el último y el borde.
-      return { fill: { ...current.fill, stops: [...stops, { offset: Math.min(1, (last.offset + 1) / 2 || 1), color: last.color }] } };
+      return { [key]: { ...current[key], stops: [...stops, { offset: Math.min(1, (last.offset + 1) / 2 || 1), color: last.color }] } };
     }));
 
     return [node('span', 'we-label', t('widgetEditor.stops')), ...rows, add];
   }
 
   function imageFields(fill, nested, assets) {
-    const picker = selectInput(fill.asset ?? '', [['', t('widgetEditor.imageNone')], ...assets.map((asset) => [asset.id, asset.name])], {
+    const picker = selectInput(fill.asset ?? '', [['', t('widgetEditor.imageNone')], ...assets.filter((asset) => asset.type.startsWith('image/')).map((asset) => [asset.id, asset.name])], {
       onInput: (id) => onRebuild((current) => ({ fill: { ...current.fill, asset: id || null } })),
       onCommit: () => {},
     });
@@ -311,7 +318,7 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
     const input = node('input');
     Object.assign(input, { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', hidden: true });
     input.addEventListener('change', () => {
-      if (input.files[0]) onUpload(input.files[0]);
+      if (input.files[0]) onUpload(input.files[0], 'image');
       input.value = '';
     });
     const upload = node('button', 'secondary', t('widgetEditor.upload'));
@@ -332,8 +339,38 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
     ];
   }
 
+  function fontPicker(element, assets) {
+    const uploaded = assets.filter((asset) => asset.type.startsWith('font/'));
+    const options = [
+      ...FONT_KEYS.map((key) => [key, key === SYSTEM_FONT ? t('widgetEditor.fontSystem') : FONTS[key].label]),
+      ...uploaded.map((asset) => [asset.id, `${asset.name} ${t('widgetEditor.fontUploaded')}`]),
+    ];
+    const picker = selectInput(element.fontFamily, options, { onInput: (value) => onRebuild(() => ({ fontFamily: value })), onCommit: () => {} });
+
+    const input = node('input');
+    Object.assign(input, { type: 'file', accept: '.woff2,.ttf,.otf', hidden: true });
+    input.addEventListener('change', () => {
+      if (input.files[0]) onUpload(input.files[0], 'font');
+      input.value = '';
+    });
+    const upload = node('button', 'secondary', t('widgetEditor.uploadFont'));
+    upload.type = 'button';
+    upload.addEventListener('click', () => input.click());
+
+    const remove = node('button', 'secondary', t('widgetEditor.deleteFont'));
+    remove.type = 'button';
+    remove.disabled = !uploaded.some((asset) => asset.id === element.fontFamily);
+    remove.addEventListener('click', () => onDeleteAsset(element.fontFamily));
+
+    const buttons = node('div', 'we-align');
+    buttons.append(upload, remove, input);
+    const group = node('div', 'we-group');
+    group.append(field(t('widgetEditor.fontFamily'), picker), buttons);
+    return group;
+  }
+
   const TYPE_SECTIONS = {
-    text({ element, set }) {
+    text({ element, set, nested, assets }) {
       const template = textInput(element.template, { maxLength: LIMITS.templateLength, ...set('template') });
       const variables = node('div', 'we-variables');
       for (const name of TEXT_VARIABLES) {
@@ -352,12 +389,45 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
       const grid = node('div', 'we-grid');
       grid.append(
         field(t('widgetEditor.fontSize'), numberInput(element.fontSize, LIMITS.fontSize, set('fontSize'))),
-        field(t('widgetEditor.maxLines'), numberInput(element.maxLines, LIMITS.maxLines, set('maxLines'))),
+        ...(element.overflow === 'marquee' ? [] : [field(t('widgetEditor.maxLines'), numberInput(element.maxLines, LIMITS.maxLines, set('maxLines')))]),
         field(t('widgetEditor.fontWeight'), selectInput(element.fontWeight, FONT_WEIGHTS.map((weight) => [weight, String(weight)]), set('fontWeight', Number))),
         field(t('widgetEditor.textAlignTitle'), selectInput(element.align, ALIGNMENTS.map((value) => [value, t(`widgetEditor.textAlign.${value}`)]), set('align'))),
         field(t('widgetEditor.textValignTitle'), selectInput(element.valign, VERTICAL_ALIGNMENTS.map((value) => [value, t(`widgetEditor.textValign.${value}`)]), set('valign'))),
       );
-      return [section(t('widgetEditor.textTitle'), field(t('widgetEditor.template'), template), variables, grid, field(t('widgetEditor.color'), colorInput(element.color, set('color'))))];
+      const textStyle = node('div', 'we-grid');
+      textStyle.append(
+        field(t('widgetEditor.lineHeight'), numberInput(element.lineHeight, LIMITS.lineHeight, { step: 0.1, ...set('lineHeight') })),
+        field(t('widgetEditor.letterSpacing'), numberInput(element.letterSpacing, LIMITS.letterSpacing, { step: 0.5, ...set('letterSpacing') })),
+      );
+      const flags = node('div', 'we-flags');
+      flags.append(checkbox(element.italic, t('widgetEditor.italic'), set('italic')), checkbox(element.uppercase, t('widgetEditor.uppercase'), set('uppercase')));
+
+      // `maxLines` solo cuenta al recortar: con rótulo el texto va en una línea.
+      const overflow = field(t('widgetEditor.overflow'), selectInput(element.overflow, OVERFLOWS.map((value) => [value, t(`widgetEditor.overflowKind.${value}`)]), {
+        onInput: (value) => onRebuild(() => ({ overflow: value })),
+        onCommit: () => {},
+      }));
+
+      const gradientToggle = checkbox(Boolean(element.gradient), t('widgetEditor.textGradient'), {
+        onInput: () => {},
+        onCommit: () => onRebuild((current) => ({ gradient: current.gradient ? null : { ...structuredClone(DEFAULT_TEXT_GRADIENT), stops: [{ offset: 0, color: current.color }, DEFAULT_TEXT_GRADIENT.stops[1]] } })),
+      });
+      const colorFields = element.gradient
+        ? [gradientToggle, field(t('widgetEditor.angle'), numberInput(element.gradient.angle, [0, 360], nested('gradient', (current, angle) => ({ ...current, angle })))), ...stopsEditor(element.gradient, nested, 'gradient')]
+        : [field(t('widgetEditor.color'), colorInput(element.color, set('color'))), gradientToggle];
+
+      const outline = [
+        field(t('widgetEditor.outlineWidth'), numberInput(element.outline.width, LIMITS.outlineWidth, nested('outline', (current, width) => ({ ...current, width })))),
+        ...(element.outline.width > 0 ? [field(t('widgetEditor.color'), colorInput(element.outline.color, nested('outline', (current, color) => ({ ...current, color }))))] : []),
+      ];
+
+      return [
+        section(t('widgetEditor.textTitle'), field(t('widgetEditor.template'), template), variables, grid, overflow),
+        section(t('widgetEditor.fontSection'), fontPicker(element, assets), flags, textStyle),
+        section(t('widgetEditor.textColorSection'), ...colorFields),
+        section(t('widgetEditor.outlineSection'), ...outline),
+        section(t('widgetEditor.shadowSection'), ...shadowFields(element.shadow, nested)),
+      ];
     },
 
     progress({ element, set }) {

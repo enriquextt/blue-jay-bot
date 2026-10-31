@@ -51,7 +51,7 @@ export class WidgetLayouts extends EventEmitter {
   // Crea un layout o, si `id` es el de uno propio, lo reemplaza. Un id desconocido o de serie crea uno nuevo (guardar como).
   // Devuelve el layout guardado, o null si no es válido o ya hay demasiados.
   save({ id = null, ...input }) {
-    const layout = normalizeLayout(input, { hasAsset: this.#assets ? (assetId) => this.#assets.has(assetId) : null });
+    const layout = normalizeLayout(input, { hasAsset: this.#assets ? (assetId, kind) => this.#assets.has(assetId, kind) : null });
     if (!layout) return null;
 
     const index = this.#custom.findIndex((item) => item.id === id);

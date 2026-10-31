@@ -26,6 +26,8 @@ test('el layout Clásico es válido y completa los valores que faltan', () => {
     {
       id: 'title', type: 'text', x: 98, y: 12, width: 484, height: 52, visible: true, locked: false, rotation: 0, opacity: 1,
       template: '{title}', color: '#ffffff', fontSize: 20, fontWeight: 700, align: 'left', valign: 'bottom', maxLines: 2,
+      fontFamily: 'system', italic: false, uppercase: false, lineHeight: 1.3, letterSpacing: 0, overflow: 'clamp', gradient: null,
+      outline: { width: 0, color: '#000000' }, shadow: { enabled: false, x: 0, y: 2, blur: 4, color: '#000000b3' },
     },
   );
 });

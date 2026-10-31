@@ -7,7 +7,7 @@ import { WebSocket } from 'ws';
 import { createServer } from '../server/app.js';
 import { openDatabase } from '../server/db/database.js';
 import { createKv } from '../server/db/kv.js';
-import { AssetError, ASSET_LIMITS, WidgetAssets, detectImage } from '../server/widget/assets.js';
+import { AssetError, ASSET_LIMITS, WidgetAssets, detectAsset } from '../server/widget/assets.js';
 import { normalizeLayout, usedAssets } from '../server/widget/layout.js';
 import { WidgetLayouts } from '../server/widget/layouts.js';
 import { SHAPES, SHAPE_TYPES } from '../public/js/widget/catalog.js';
@@ -114,13 +114,13 @@ test('al guardar se comprueba que las imágenes existen', () => {
   assert.ok(normalizeLayout(layout([image(asset)]), { hasAsset: (id) => id === asset }));
 });
 
-test('detectImage reconoce PNG, JPEG, GIF y WebP por sus bytes y descarta SVG y otros', () => {
-  assert.equal(detectImage(PNG).type, 'image/png');
-  assert.equal(detectImage(JPEG).type, 'image/jpeg');
-  assert.equal(detectImage(GIF).type, 'image/gif');
-  assert.equal(detectImage(WEBP).type, 'image/webp');
+test('detectAsset reconoce PNG, JPEG, GIF y WebP por sus bytes y descarta SVG y otros', () => {
+  assert.equal(detectAsset(PNG).type, 'image/png');
+  assert.equal(detectAsset(JPEG).type, 'image/jpeg');
+  assert.equal(detectAsset(GIF).type, 'image/gif');
+  assert.equal(detectAsset(WEBP).type, 'image/webp');
   for (const buffer of [SVG, Buffer.from('MZ ejecutable'), Buffer.alloc(0), Buffer.from('RIFF....WAVEfmt ')]) {
-    assert.equal(detectImage(buffer), null);
+    assert.equal(detectAsset(buffer), null);
   }
 });
 
