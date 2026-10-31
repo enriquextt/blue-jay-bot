@@ -130,7 +130,11 @@
         <input id="library-search" type="search" autocomplete="off" data-i18n-placeholder="library.searchPlaceholder">
         <ul id="library-results" class="track-list"></ul>
         <p id="library-empty" class="empty" data-i18n="library.empty">No hay pistas que mostrar.</p>
-        <p id="library-showing" class="empty"></p>
+        <div id="library-pager" class="controls" hidden>
+          <button id="library-prev" class="secondary" type="button"><span data-i18n="library.prev">Anterior</span></button>
+          <span id="library-showing" class="empty"></span>
+          <button id="library-next" class="secondary" type="button"><span data-i18n="library.next">Siguiente</span></button>
+        </div>
       </div>
 
       <div id="panel-history" class="tabpanel" role="tabpanel" aria-labelledby="tab-history" hidden>

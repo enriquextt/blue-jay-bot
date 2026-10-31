@@ -168,7 +168,9 @@
     "addToQueue": "Add to queue",
     "count_one": "{{count}} track.",
     "count_other": "{{count}} tracks.",
-    "showing": "Showing {{shown}} of {{total}}. Refine the search to see the rest.",
+    "showing": "Tracks {{from}} to {{to}} of {{total}}",
+    "prev": "Previous",
+    "next": "Next",
     "status": {
       "none": "No folder configured.",
       "scanning": "Scanning \"{{folder}}\"…",

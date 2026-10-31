@@ -100,6 +100,12 @@ test('search ignora mayúsculas y acentos, exige todos los términos y respeta l
     assert.equal(library.search('').total, 4);
     assert.equal(library.search('', { limit: 2 }).items.length, 2);
 
+    const all = library.search('').items.map((track) => track.localId);
+    const second = library.search('', { limit: 2, offset: 2 });
+    assert.deepEqual(second.items.map((track) => track.localId), all.slice(2, 4));
+    assert.equal(second.total, 4, 'el total no depende de la página');
+    assert.deepEqual(library.search('', { limit: 2, offset: 4 }).items, []);
+
     const excluded = library.search('', { exclude: (track) => track.artist === 'Banda' });
     assert.equal(excluded.total, 3);
   } finally {

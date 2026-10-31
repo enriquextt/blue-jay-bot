@@ -328,7 +328,9 @@ export class Library extends EventEmitter {
   //
   // Con `allowMissing`, la pista no se descarta si faltan hasta esa cantidad de palabras, siempre que
   // coincidan al menos dos. Las que faltan no suman, así que quedan detrás de las que coinciden entera.
-  search(query, { limit = 50, exclude = () => false, strict = false, allowMissing = 0 } = {}) {
+  //
+  // Devuelve `limit` resultados a partir de `offset` (para paginar) y el `total` de coincidencias.
+  search(query, { limit = 50, offset = 0, exclude = () => false, strict = false, allowMissing = 0 } = {}) {
     const text = fold(String(query ?? '')).trim();
     const terms = text.split(/\s+/).filter(Boolean);
     const phrases = wordCombinations(terms);
@@ -340,7 +342,7 @@ export class Library extends EventEmitter {
         .sort((a, b) => b.score - a.score) // estable: a igual puntuación se conserva el orden alfabético
         .map(({ track }) => track);
     }
-    return { items: matches.slice(0, limit).map(publicView), total: matches.length };
+    return { items: matches.slice(offset, offset + limit).map(publicView), total: matches.length };
   }
 
   static #score({ fields }, text, terms, phrases, strict, allowMissing) {

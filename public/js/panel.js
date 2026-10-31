@@ -64,6 +64,9 @@ const elements = {
   librarySearch: document.querySelector('#library-search'),
   libraryResults: document.querySelector('#library-results'),
   libraryEmpty: document.querySelector('#library-empty'),
+  libraryPager: document.querySelector('#library-pager'),
+  libraryPrev: document.querySelector('#library-prev'),
+  libraryNext: document.querySelector('#library-next'),
   libraryShowing: document.querySelector('#library-showing'),
 };
 
@@ -72,7 +75,8 @@ const TAB_STORAGE_KEY = 'blueJay.tab';
 let state = { current: null, queue: [], volume: 50, paused: false, fallback: { active: false, mode: 'sequential', includeLibrary: false } };
 let baseListData = { items: [], banned: [] };
 let libraryStatus = { configured: false, folderName: null, status: 'none', count: 0 };
-let libraryResults = { items: [], total: 0 };
+let libraryResults = { items: [], total: 0, limit: 50 };
+let libraryOffset = 0;
 let localPlayer = null;
 let diagnostics = null;
 let searchTimer = null;
@@ -243,7 +247,7 @@ function renderLibrary() {
   elements.librarySearch.disabled = !configured;
   elements.countLibrary.textContent = count;
 
-  const { items, total } = libraryResults;
+  const { items, total, limit } = libraryResults;
   elements.libraryResults.replaceChildren(...items.map((track) => {
     const item = document.createElement('li');
     item.append(
@@ -265,12 +269,21 @@ function renderLibrary() {
     return item;
   }));
   elements.libraryEmpty.hidden = !configured || items.length > 0;
-  elements.libraryShowing.hidden = total <= items.length;
-  elements.libraryShowing.textContent = t('library.showing', { shown: items.length, total });
+  elements.libraryPager.hidden = total <= limit;
+  elements.libraryPrev.disabled = libraryOffset === 0;
+  elements.libraryNext.disabled = libraryOffset + limit >= total;
+  elements.libraryShowing.textContent = t('library.showing', { from: libraryOffset + 1, to: libraryOffset + items.length, total });
 }
 
 function requestSearch() {
-  if (libraryStatus.configured) send({ type: 'library.search', query: elements.librarySearch.value.trim() });
+  if (libraryStatus.configured) {
+    send({ type: 'library.search', query: elements.librarySearch.value.trim(), offset: libraryOffset });
+  }
+}
+
+function goToLibraryPage(offset) {
+  libraryOffset = Math.max(0, offset);
+  requestSearch();
 }
 
 function savedTab() {
@@ -395,8 +408,13 @@ function handleMessage(message) {
       requestSearch();
       break;
     case 'library.results':
-      // Se descartan respuestas de una búsqueda anterior a lo que hay escrito ahora.
-      if (message.query !== elements.librarySearch.value.trim()) break;
+      // Se descartan respuestas de una búsqueda o una página anterior a la que se mira ahora.
+      if (message.query !== elements.librarySearch.value.trim() || message.offset !== libraryOffset) break;
+      // Si la lista se encogió (reescaneo, veto) y esta página ya no existe, se vuelve a la última.
+      if (message.items.length === 0 && message.total > 0) {
+        goToLibraryPage(Math.floor((message.total - 1) / message.limit) * message.limit);
+        break;
+      }
       libraryResults = message;
       renderLibrary();
       break;
@@ -468,7 +486,10 @@ function setupLibraryEvents() {
   elements.libraryInclude.addEventListener('change', () => {
     send({ type: 'baselist.includeLibrary', enabled: elements.libraryInclude.checked });
   });
+  elements.libraryPrev.addEventListener('click', () => goToLibraryPage(libraryOffset - libraryResults.limit));
+  elements.libraryNext.addEventListener('click', () => goToLibraryPage(libraryOffset + libraryResults.limit));
   elements.librarySearch.addEventListener('input', () => {
+    libraryOffset = 0;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(requestSearch, SEARCH_DEBOUNCE_MS);
   });

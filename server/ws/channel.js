@@ -10,6 +10,8 @@ const MAX_ID_LENGTH = 64;
 const MAX_VOLUME = 100;
 const MAX_PATH_LENGTH = 1024;
 const MAX_QUERY_LENGTH = 100;
+const MAX_OFFSET = 1_000_000;
+const LIBRARY_PAGE_SIZE = 50;
 const MAX_SECONDS = 24 * 60 * 60;
 const WIDGET_TEST_SECONDS = 8;
 const WIDGET_SHOW_SECONDS = 10;
@@ -115,11 +117,13 @@ export function createChannel({
 
   library.on('change', broadcastLibrary);
 
-  function searchLibrary(socket, query) {
-    const { items, total } = library.search(query, { exclude: (track) => blacklist.has(track) });
+  function searchLibrary(socket, query, offset) {
+    const { items, total } = library.search(query, { limit: LIBRARY_PAGE_SIZE, offset, exclude: (track) => blacklist.has(track) });
     send(socket, {
       type: 'library.results',
       query,
+      offset,
+      limit: LIBRARY_PAGE_SIZE,
       total,
       items: items.map((track) => ({ ...track, id: track.localId, favorite: baseList.isFavorite(trackKey(track)) })),
     });
@@ -409,7 +413,9 @@ export function createChannel({
         if (typeof command.query !== 'string' || command.query.length > MAX_QUERY_LENGTH) {
           return sendError(socket, 'errors.invalidMessage');
         }
-        return searchLibrary(socket, command.query);
+        const offset = command.offset ?? 0;
+        if (!Number.isInteger(offset) || offset < 0 || offset > MAX_OFFSET) return sendError(socket, 'errors.invalidMessage');
+        return searchLibrary(socket, command.query, offset);
       }
 
       case 'library.addToBaseList': {

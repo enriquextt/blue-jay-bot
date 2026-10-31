@@ -409,6 +409,39 @@ test('library.setFolder indexa la carpeta y library.search devuelve pistas sin r
   }
 });
 
+test('library.search pagina de 50 en 50 con offset y rechaza un offset no válido', async () => {
+  const ctx = await startLibraryServer();
+  try {
+    for (let i = 0; i < 53; i += 1) await writeFile(join(ctx.music, `Pista ${String(i).padStart(2, '0')}.mp3`), 'x');
+    ctx.client.messages.length = 0;
+    send(ctx.client, { type: 'library.rescan' });
+    await ctx.client.waitFor((m) => m.type === 'library' && m.data.status === 'ready' && m.data.count === 56);
+
+    const ask = async (offset) => {
+      const before = ctx.client.messages.length;
+      send(ctx.client, { type: 'library.search', query: '', offset });
+      return ctx.client.waitFor((m) => m.type === 'library.results' && m.offset === offset && ctx.client.messages.indexOf(m) >= before);
+    };
+
+    const first = await ask(0);
+    assert.deepEqual([first.items.length, first.total, first.limit], [50, 56, 50]);
+
+    const second = await ask(50);
+    assert.equal(second.items.length, 6);
+    assert.equal(new Set([...first.items, ...second.items].map((item) => item.id)).size, 56, 'sin repetidas entre páginas');
+
+    for (const offset of [-1, 1.5, '50', 2_000_000]) {
+      send(ctx.client, { type: 'library.search', query: '', offset });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const errors = ctx.client.messages.filter((m) => m.type === 'error');
+    assert.equal(errors.length, 4);
+    assert.ok(errors.every((m) => m.key === 'errors.invalidMessage'));
+  } finally {
+    await ctx.cleanup();
+  }
+});
+
 test('GET /media/:id sirve el archivo con Range y responde 404 a ids desconocidos o rutas fuera de la carpeta', async () => {
   const ctx = await startLibraryServer();
   try {

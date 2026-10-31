@@ -168,7 +168,9 @@
     "addToQueue": "Añadir a la cola",
     "count_one": "{{count}} pista.",
     "count_other": "{{count}} pistas.",
-    "showing": "Mostrando {{shown}} de {{total}}. Afina la búsqueda para ver el resto.",
+    "showing": "Pistas {{from}} a {{to}} de {{total}}",
+    "prev": "Anterior",
+    "next": "Siguiente",
     "status": {
       "none": "Sin carpeta configurada.",
       "scanning": "Escaneando «{{folder}}»…",

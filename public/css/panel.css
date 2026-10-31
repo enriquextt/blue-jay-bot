@@ -434,6 +434,11 @@ button[aria-pressed="true"] {
   margin: 12px 0 0;
 }
 
+#library-showing {
+  flex: 1;
+  text-align: center;
+}
+
 .diagnostics {
   display: grid;
   grid-template-columns: max-content 1fr;
