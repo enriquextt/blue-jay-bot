@@ -8,6 +8,7 @@ import { createMessagesView } from './messages-view.js';
 import { createPlayer } from './player.js';
 import { createPlaylistsView } from './playlists-view.js';
 import { createSettingsView } from './settings-view.js';
+import { createWidgetEditorView } from './widget-editor-view.js';
 
 const RECONNECT_DELAY_MS = 2000;
 const PROGRESS_INTERVAL_MS = 1000;
@@ -595,6 +596,7 @@ async function start() {
     createHistoryView({ send }),
     createPlaylistsView({ send }),
     createMessagesView({ send }),
+    createWidgetEditorView({ send }),
   );
   setupIcons();
   setupEvents();

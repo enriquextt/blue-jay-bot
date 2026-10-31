@@ -88,7 +88,8 @@ export function createRenderer(container, { idleOpacity = null } = {}) {
   let updaters = [];
 
   function fit() {
-    if (!layout) return;
+    // Con el contenedor oculto (por ejemplo, en una pestaña cerrada) no hay tamaño con el que escalar.
+    if (!layout || container.clientWidth === 0 || container.clientHeight === 0) return;
     const { width, height } = layout.canvas;
     const scale = Math.min(container.clientWidth / width, container.clientHeight / height);
     stage.style.transform = `scale(${scale})`;

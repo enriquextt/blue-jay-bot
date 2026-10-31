@@ -8,6 +8,7 @@
   <link rel="icon" href="/favicon-64.png" type="image/png" sizes="64x64">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/panel.css">
+  <link rel="stylesheet" href="/css/widget-render.css">
 </head>
 <body>
   <header class="topbar">
@@ -91,6 +92,9 @@
         </button>
         <button id="tab-messages" class="tab" type="button" role="tab" data-tab="messages" aria-selected="false" aria-controls="panel-messages" tabindex="-1">
           <span data-i18n="messages.title">Mensajes</span>
+        </button>
+        <button id="tab-widget" class="tab" type="button" role="tab" data-tab="widget" aria-selected="false" aria-controls="panel-widget" tabindex="-1">
+          <span data-i18n="widgetEditor.title">Widget</span>
         </button>
         <button id="tab-settings" class="tab" type="button" role="tab" data-tab="settings" aria-selected="false" aria-controls="panel-settings" tabindex="-1">
           <span data-i18n="settings.title">Ajustes</span>
@@ -205,6 +209,37 @@
         <p id="messages-bot-language" class="empty"></p>
         <div id="messages-list" class="messages-list"></div>
         <p id="messages-empty" class="empty" data-i18n="messages.empty" hidden></p>
+      </div>
+
+      <div id="panel-widget" class="tabpanel" role="tabpanel" aria-labelledby="tab-widget" hidden>
+        <p class="empty" data-i18n="widgetEditor.intro"></p>
+        <div class="filters we-toolbar">
+          <select id="we-layout" data-i18n-aria-label="widgetEditor.layout"></select>
+          <span id="we-status" class="we-status"></span>
+          <button id="we-activate" class="secondary" type="button" data-i18n="widgetEditor.activate"></button>
+          <button id="we-duplicate" class="secondary" type="button" data-i18n="widgetEditor.duplicate"></button>
+          <button id="we-delete" class="secondary" type="button"><span id="we-delete-label" data-i18n="widgetEditor.delete"></span></button>
+          <button id="we-copy-url" class="secondary" type="button" data-i18n="widgetEditor.copyUrl"></button>
+          <span id="we-history" class="we-history"></span>
+          <button id="we-discard" class="secondary" type="button" data-i18n="widgetEditor.discard"></button>
+          <button id="we-save" type="button" data-i18n="widgetEditor.save"></button>
+        </div>
+        <p id="we-empty" class="empty" data-i18n="widgetEditor.empty"></p>
+        <div id="we-body" class="we-body" hidden>
+          <aside class="we-layers-panel">
+            <div class="we-add">
+              <select id="we-add-type" data-i18n-aria-label="widgetEditor.addType"></select>
+              <button id="we-add" type="button" data-i18n="widgetEditor.add"></button>
+            </div>
+            <ul id="we-layers" class="we-layers"></ul>
+          </aside>
+          <div class="we-stage">
+            <div id="we-canvas" class="we-canvas" tabindex="0" data-i18n-aria-label="widgetEditor.canvas"></div>
+            <label class="check"><input id="we-long-title" type="checkbox"> <span data-i18n="widgetEditor.longTitle"></span></label>
+            <p class="empty" data-i18n="widgetEditor.shortcuts"></p>
+          </div>
+          <aside id="we-inspector" class="we-inspector"></aside>
+        </div>
       </div>
 
       <div id="panel-settings" class="tabpanel" role="tabpanel" aria-labelledby="tab-settings" hidden>

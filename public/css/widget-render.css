@@ -1,0 +1,64 @@
+/* Dibujo del widget: lo comparten widget.html y el lienzo del editor del panel. */
+/* El lienzo tiene el tamaño del layout en píxeles y `render.js` lo escala para que quepa. */
+/* En reposo es invisible (o casi, con `idleOpacity`); `.shown` lo hace visible unos segundos. */
+.stage {
+  --idle-opacity: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  opacity: var(--idle-opacity);
+  transition: opacity 0.4s;
+}
+
+.stage.shown {
+  opacity: 1;
+}
+
+/* Sin nada que mostrar no se ve ni siquiera con opacidad en reposo. */
+.stage.empty {
+  opacity: 0;
+}
+
+.el {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.el.text {
+  display: flex;
+  flex-direction: column;
+}
+
+.text-body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.el.progress {
+  overflow: hidden;
+}
+
+.bar {
+  width: 0;
+  height: 100%;
+}
+
+.el.disc svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: spin 3s linear infinite;
+}
+
+.stage.paused .el.disc svg {
+  animation-play-state: paused;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

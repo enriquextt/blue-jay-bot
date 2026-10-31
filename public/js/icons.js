@@ -15,6 +15,13 @@ const SHAPES = {
   trash: [['path', 'M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3']],
   bookmark: [['path', 'M6 4h12v16l-6-4-6 4z']],
   refresh: [['path', 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5']],
+  eye: [['path', 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z'], ['circle', 12, 12, 3]],
+  eyeOff: [['path', 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z'], ['circle', 12, 12, 3], ['path', 'M4 4l16 16']],
+  lock: [['path', 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3']],
+  unlock: [['path', 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 7.5-1.5']],
+  copy: [['path', 'M9 9h11v11H9zM5 15V5h10']],
+  undo: [['path', 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3']],
+  redo: [['path', 'M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3']],
 };
 
 function shape([type, ...data]) {
