@@ -97,8 +97,8 @@ Leyenda de la columna de decisión:
 - [x] `!song`: información de la canción actual — **Adaptar**. En pistas locales añade artista, álbum y la primera nota de las etiquetas, y el título lleva entre paréntesis el subtítulo (`TIT3`) si lo tiene
 - [x] Actualización en vivo mediante WebSocket — **Mantener** (fase 6). El widget se conecta a `/ws?view=widget`, de solo lectura, y solo recibe la canción actual y su progreso. El progreso lo envía el reproductor del panel cada segundo, así que con el panel cerrado el widget no avanza
 - [ ] Audio opcional del widget (solo YouTube) — **Opcional**
-- [ ] Editor visual: mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento — **Opcional**
-- [ ] Guardar y sincronizar layouts con las fuentes del widget — **Opcional**
+- [ ] Editor visual: mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento — **Mantener** (decidido añadirlo). Asignado a la fase 8
+- [ ] Guardar y sincronizar layouts con las fuentes del widget — **Mantener** (decidido añadirlo). Asignado a la fase 8
 - [ ] Badge de estado `!SR` editable — **Opcional**
 - [x] Botón de prueba que envía una tarjeta temporal sin tocar la cola real — **Mantener** (fase 6). Pestaña Ajustes; la tarjeta dura 8 segundos
 - [x] URL del widget generada automáticamente desde Ajustes — **Mantener** (fase 6). Con botón de copiar; incluye `?lang=` con el idioma del panel
@@ -116,9 +116,9 @@ Leyenda de la columna de decisión:
 - [ ] Servidor HTTP local que sirve la página — **Adaptar** (propio de Node o Python)
 - [ ] Servidor WebSocket local para chat y widget — **Adaptar**
 - [ ] Clave de API de YouTube Data API v3 guardada en Ajustes — **Mantener**
-- [ ] Panel de diagnóstico: estado del WebSocket, versión del import, puente del widget y presencia de la clave de API — **Mantener**
-- [ ] Verificación de la versión del import de Streamer.bot con aviso si falta algo — **Adaptar** (solo si se mantiene Streamer.bot)
-- [ ] Exportar e importar ajustes, favoritos, historial, layouts y mensajes personalizados — **Mantener**
-- [ ] Exportar ajustes sin incluir la clave de API ni los tokens de Spotify — **Mantener**
+- [ ] Panel de diagnóstico: estado del WebSocket, widgets conectados y presencia de la clave de API — **Mantener**. Asignado a la fase 7 (sin «versión del import» ni «puente del widget»: dependían de Streamer.bot)
+- [ ] Verificación de la versión del import de Streamer.bot con aviso si falta algo — **Mantener**. Descartado: Streamer.bot ya no forma parte del proyecto (ver `docs/propuesta.md`)
+- [ ] Exportar e importar ajustes, favoritos, historial, layouts y mensajes personalizados — **Mantener**. Asignado a la fase 9, después del editor de layouts
+- [ ] Exportar ajustes sin incluir la clave de API ni los tokens de Spotify — **Mantener**. Asignado a la fase 9
 - [x] Notificaciones en la app en lugar de `alert` / `confirm` nativos — **Mantener** (changelog v1.2.3)
 - [ ] Soporte de chat multistream: Twitch, Kick y YouTube — **Adaptar**

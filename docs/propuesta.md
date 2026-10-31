@@ -143,8 +143,10 @@ Dos columnas (decidido en la fase 5.5): a la izquierda, un tercio con **Sonando 
 | 5. Límites, historial y persistencia | SQLite (`data/blue-jay.db`): límites por usuario y global, interruptor de peticiones del chat, historial de peticiones (con su resultado) y de reproducción con filtros y borrado, listas de reproducción propias, y persistencia entre reinicios de la cola, la canción actual, el volumen y el modo START/SHUFFLE | Control de peticiones y reinicios sin perder la cola |
 | 5.5. Mensajes del bot | Mensajes del chat editables por idioma y activables o desactivables uno a uno, con vista previa; panel en dos columnas (1/3 y 2/3) | El streamer decide qué dice el bot y con qué palabras |
 | 6. Widget OBS | Widget compacto, WebSocket en vivo, prueba | Widget en OBS (hecha) |
-| 7. Operación | Diagnóstico, exportar e importar ajustes, y controles del panel (reordenar, eliminar y saltar pistas; play, pausa, siguiente, aleatorio) | Mantenimiento sencillo y panel completo |
-| 8. Opcional | Spotify, editor de widget, adaptadores de Kick y YouTube (chat) | Ampliaciones |
+| 7. Operación | Diagnóstico y controles del panel (reordenar, eliminar y saltar pistas; play, pausa, siguiente, aleatorio) | Panel completo y estado del sistema a la vista |
+| 8. Editor del widget | Editor visual de layouts (mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento), con layouts guardados y sincronizados con los widgets | Widget a medida sin tocar CSS |
+| 9. Exportar e importar | Exportar e importar ajustes, layouts y mensajes personalizados, sin incluir claves de API ni tokens | Copias de seguridad y cambio de equipo |
+| 10. Opcional | Spotify, adaptadores de Kick y YouTube (chat) | Ampliaciones |
 
 ## 5. Requisitos no funcionales
 
@@ -164,7 +166,7 @@ Todas las preguntas están respondidas. Las decisiones se reflejan en las seccio
 
 1. **¿Node.js o Python?** Node.js. Ver 3.1.
 2. **¿Streamer.bot como puente o conexión directa?** Conexión directa a Twitch, Kick y YouTube. Streamer.bot no forma parte del proyecto nuevo. Ver 3.2.
-3. **¿Spotify en el alcance inicial?** No. Queda para una fase posterior (ver 2 y 4, fase 8).
+3. **¿Spotify en el alcance inicial?** No. Queda para una fase posterior (ver 2 y 4, fase 10).
 4. **¿Licencia del proyecto nuevo?** La misma que `better-sr/`: GPL-3.0. Ver 6.
 5. **¿La lista base local se mezcla con las playlists de YouTube?** Sí. La lista base es única y puede contener pistas de YouTube y de la carpeta local. Ver 3.5.
 
@@ -192,3 +194,4 @@ Todas las preguntas están respondidas. Las decisiones se reflejan en las seccio
 | 2026-10-29 | **Duración máxima de vídeo.** `fetchVideoInfo` pide también `contentDetails` (misma llamada de 1 unidad de cuota) y devuelve `duration` en segundos (`parseDuration`; los directos, `P0D`, quedan en `null`). Nuevo ajuste `maxDuration { enabled, minutes }` (7 por defecto, 1 a 600) en Ajustes. `checkPlayable` pasa a `checkVideo`: rechaza con `chat.sr.tooLong` y el resultado `too_long` si el vídeo dura más, tanto en enlaces como en resultados de búsqueda; la comprobación de «se puede incrustar» sigue limitada a enlaces. Sin clave de YouTube o con la API caída no se puede medir y la petición pasa. No se aplica a las peticiones hechas desde el panel ni a las pistas locales. |
 | 2026-10-29 | **Directos.** `fetchVideoInfo` devuelve también `live` (`liveBroadcastContent` en `live` o `upcoming`). Con la duración máxima activada, `checkVideo` rechaza los directos con `chat.sr.live` y el resultado `live` del historial: no tienen fin y no caben en ningún máximo. Con el ajuste apagado se admiten. Sin clave de YouTube no se detectan. |
 | 2026-10-30 | **Subtítulo visible.** El subtítulo (`TIT3`) de las pistas locales se lee por separado (`tags.subtitle`, y sigue contando como nota en la búsqueda) y el widget y `!song` lo muestran entre paréntesis tras el título; sin subtítulo, vacío o igual al título no se añade nada. El servidor compone el texto (`titleWithSubtitle`), así que el widget no cambia, y el subtítulo no se guarda en la cola ni en el historial: se consulta a la biblioteca al emitir el estado. Criterio de etiquetado en `localLibrary`: el subtítulo es el título alterno con el que se conoce la canción fuera de su idioma (romaji o título original, por ejemplo «ゼロイチ»/«Zero Ichi» para «01»), contrastado con Wikipedia, ANN y fuentes de anime; el comentario guarda la traducción al inglés y la descripción la obra o el álbum. Se evitan las transliteraciones inventadas (katakana de títulos en inglés, romaji de palabras que ya son inglesas). `tools/apply-tags.mjs` acepta `null` en un campo para borrar el frame. |
+| 2026-10-30 | Replanteo de las fases finales. Streamer.bot queda descartado del todo: se quita del checklist la verificación de la versión del import y el diagnóstico de la fase 7 ya no incluye «versión del import» ni «puente del widget». El editor visual de layouts del widget pasa de opcional a la fase 8, y exportar e importar (ajustes, layouts y mensajes personalizados, sin claves ni tokens) se mueve a la fase 9 para que pueda incluir los layouts. La fase 7 queda en diagnóstico y controles del panel. Los opcionales (Spotify, chat de Kick y YouTube) pasan a la fase 10. |
