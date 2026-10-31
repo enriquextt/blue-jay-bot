@@ -166,7 +166,7 @@ data/       Datos locales y credenciales (ignorado por git)
 | 5.5 | Mensajes del bot editables y panel en dos columnas | Hecha |
 | 6 | Widget de OBS | Hecha |
 | 7 | Diagnóstico y controles de reproducción en el panel | Hecha |
-| 8 | Editor visual de layouts del widget | Pendiente |
+| 8 | Editor visual de layouts del widget | En curso (8.1 hecha: el widget se dibuja desde un layout) |
 | 9 | Exportar e importar ajustes, layouts y mensajes personalizados | Pendiente |
 | 10 | Opcionales: Spotify, chat de Kick y YouTube | Pendiente |
 

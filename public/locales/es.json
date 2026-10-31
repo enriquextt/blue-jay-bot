@@ -50,7 +50,9 @@
     "playlistInvalid": "El nombre no es válido o ya hay demasiadas listas.",
     "playlistNotFound": "Esa lista ya no existe.",
     "queueEmpty": "No hay nada en la cola ni sonando.",
-    "messageInvalid": "El texto no es válido: máximo 400 caracteres y solo las variables que ya tiene ese mensaje."
+    "messageInvalid": "El texto no es válido: máximo 400 caracteres y solo las variables que ya tiene ese mensaje.",
+    "layoutInvalid": "El layout del widget no es válido o ya hay demasiados.",
+    "layoutNotFound": "Ese layout del widget ya no existe."
   },
   "notices": {
     "skippedUnavailable": "Saltada, no disponible: {{title}}",
@@ -226,7 +228,10 @@
   "widget": {
     "requestedBy": "pedida por {{user}}",
     "testTitle": "Canción de prueba",
-    "testArtist": "Blue Jay Bot"
+    "testArtist": "Blue Jay Bot",
+    "templates": {
+      "classic": "Clásico"
+    }
   },
   "history": {
     "title": "Historial",

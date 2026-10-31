@@ -57,7 +57,7 @@ test('el widget solo recibe el estado de la canción actual, sin lista base ni b
     assert.equal(state.data.current.title, `Título ${ID_A}`);
 
     await pause();
-    assert.deepEqual(widget.messages.map((m) => m.type), ['state']);
+    assert.deepEqual(widget.messages.map((m) => m.type), ['widget.layout', 'state']);
 
     panel.socket.close();
     widget.socket.close();
@@ -73,8 +73,9 @@ test('el widget recibe cada cambio de canción y no puede mandar órdenes', asyn
     await widget.waitFor((m) => m.type === 'state' && m.data.current === null);
 
     send(widget, { type: 'queue.add', url: `https://youtu.be/${ID_A}` });
+    send(widget, { type: 'widget.layout.activate', id: 'classic' });
     await pause();
-    assert.equal(widget.messages.length, 1);
+    assert.equal(widget.messages.length, 2);
 
     const panel = await connect(url);
     send(panel, { type: 'queue.add', url: `https://youtu.be/${ID_A}` });
@@ -202,5 +203,90 @@ test('el widget muestra el subtítulo de una pista local entre paréntesis y nad
     widget.socket.close();
     await server.close();
     await rm(base, { recursive: true, force: true });
+  }
+});
+
+const LAYOUT = {
+  name: 'Mío',
+  canvas: { width: 300, height: 80 },
+  elements: [{ id: 'bg', type: 'box', x: 0, y: 0, width: 300, height: 80 }],
+};
+
+test('el widget recibe el layout activo al conectar y cada cambio, y uno propio con ?layout=', async () => {
+  const { server, url } = await startServer();
+  try {
+    const panel = await connect(url);
+    const widget = await connect(`${url}?view=widget`);
+    const first = await widget.waitFor((m) => m.type === 'widget.layout');
+    assert.equal(first.data.id, 'classic');
+    assert.equal(first.data.builtin, true);
+
+    const lists = await panel.waitFor((m) => m.type === 'widget.layouts');
+    assert.equal(lists.data.active, 'classic');
+    assert.deepEqual(lists.data.layouts.map((layout) => layout.id), ['classic']);
+
+    send(panel, { type: 'widget.layout.save', layout: LAYOUT });
+    const { id } = await panel.waitFor((m) => m.type === 'widget.layout.saved');
+
+    const custom = await connect(`${url}?view=widget&layout=${id}`);
+    assert.equal((await custom.waitFor((m) => m.type === 'widget.layout')).data.name, 'Mío');
+
+    // Activarlo cambia el widget sin `?layout=`; el que pidió el suyo lo conserva.
+    send(panel, { type: 'widget.layout.activate', id });
+    await widget.waitFor((m) => m.type === 'widget.layout' && m.data.id === id);
+
+    send(panel, { type: 'widget.layout.save', layout: { ...LAYOUT, id, name: 'Editado' } });
+    await custom.waitFor((m) => m.type === 'widget.layout' && m.data.name === 'Editado');
+
+    // Borrar el activo devuelve a los widgets al Clásico; el que lo pidió también, porque ya no existe.
+    send(panel, { type: 'widget.layout.delete', id });
+    await pause(100);
+    assert.equal(widget.messages.findLast((m) => m.type === 'widget.layout').data.id, 'classic');
+    assert.equal(custom.messages.findLast((m) => m.type === 'widget.layout').data.id, 'classic');
+
+    for (const socket of [panel, widget, custom]) socket.socket.close();
+  } finally {
+    await server.close();
+  }
+});
+
+test('las órdenes de layout validan, solo las acepta el panel y los de serie no se borran', async () => {
+  const { server, url } = await startServer();
+  try {
+    const panel = await connect(url);
+    const errors = () => panel.messages.filter((m) => m.type === 'error').map((m) => m.key);
+
+    send(panel, { type: 'widget.layout.save', layout: { ...LAYOUT, name: '' } });
+    send(panel, { type: 'widget.layout.save' });
+    send(panel, { type: 'widget.layout.delete', id: 'classic' });
+    send(panel, { type: 'widget.layout.activate', id: 'no-existe' });
+    send(panel, { type: 'widget.layout.duplicate', id: 'no-existe', name: 'x' });
+    send(panel, { type: 'widget.layout.duplicate', id: 'classic' });
+    await pause(100);
+    assert.deepEqual(errors(), [
+      'errors.layoutInvalid',
+      'errors.layoutInvalid',
+      'errors.layoutNotFound',
+      'errors.layoutNotFound',
+      'errors.layoutNotFound',
+      'errors.invalidMessage',
+    ]);
+
+    send(panel, { type: 'widget.layout.duplicate', id: 'classic', name: 'Copia' });
+    const { id } = await panel.waitFor((m) => m.type === 'widget.layout.saved');
+    const lists = panel.messages.findLast((m) => m.type === 'widget.layouts');
+    assert.deepEqual(lists.data.layouts.map((layout) => layout.name), ['Clásico', 'Copia']);
+    assert.equal(lists.data.layouts.find((layout) => layout.id === id).builtin, false);
+
+    // Un widget solo lee: sus órdenes se ignoran.
+    const widget = await connect(`${url}?view=widget`);
+    send(widget, { type: 'widget.layout.delete', id });
+    await pause();
+    assert.equal(panel.messages.findLast((m) => m.type === 'widget.layouts').data.layouts.length, 2);
+
+    panel.socket.close();
+    widget.socket.close();
+  } finally {
+    await server.close();
   }
 });

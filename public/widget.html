@@ -7,27 +7,7 @@
   <link rel="stylesheet" href="/css/widget.css">
 </head>
 <body>
-  <div id="card" class="card" hidden>
-    <svg id="disc" class="disc" viewBox="0 0 100 100" aria-hidden="true">
-      <circle cx="50" cy="50" r="48" fill="#0d0f14" stroke="#2a2f3a" stroke-width="2"/>
-      <circle cx="50" cy="50" r="40" fill="none" stroke="#1d212b" stroke-width="1.5"/>
-      <circle cx="50" cy="50" r="33" fill="none" stroke="#1d212b" stroke-width="1.5"/>
-      <circle cx="50" cy="50" r="26" fill="none" stroke="#1d212b" stroke-width="1.5"/>
-      <path d="M50 8 A42 42 0 0 1 92 50" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="3" stroke-linecap="round"/>
-      <path d="M50 92 A42 42 0 0 1 8 50" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="50" cy="50" r="16" fill="#4f8cff"/>
-      <circle cx="50" cy="40" r="4" fill="#fff" fill-opacity=".55"/>
-      <circle cx="50" cy="50" r="3" fill="#0d0f14"/>
-    </svg>
-    <div class="content">
-      <p id="title" class="title"></p>
-      <p id="meta" class="meta"></p>
-      <div class="progress">
-        <div id="bar" class="bar"></div>
-      </div>
-      <p class="times"><span id="position">0:00</span><span id="duration"></span></p>
-    </div>
-  </div>
+  <div id="root"></div>
 
   <script src="/vendor/i18next/i18next.min.js"></script>
   <script type="module" src="/js/widget.js"></script>

@@ -98,7 +98,7 @@ Leyenda de la columna de decisión:
 - [x] Actualización en vivo mediante WebSocket — **Mantener** (fase 6). El widget se conecta a `/ws?view=widget`, de solo lectura, y solo recibe la canción actual y su progreso. El progreso lo envía el reproductor del panel cada segundo, así que con el panel cerrado el widget no avanza
 - [ ] Audio opcional del widget (solo YouTube) — **Opcional**
 - [ ] Editor visual: mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento — **Mantener** (decidido añadirlo). Asignado a la fase 8 (subfase 8.2)
-- [ ] Guardar y sincronizar layouts con las fuentes del widget — **Mantener** (decidido añadirlo). Asignado a la fase 8 (subfase 8.1); varios layouts, uno por fuente de navegador con `?layout=`
+- [x] Guardar y sincronizar layouts con las fuentes del widget — **Mantener** (decidido añadirlo). Fase 8, subfase 8.1: el widget se dibuja desde un layout (`widget.layout` por WebSocket), hay varios layouts guardados en SQLite y cada fuente de navegador elige el suyo con `?layout=<id>` (sin él, el activo). Las órdenes `widget.layout.save`, `.duplicate`, `.delete` y `.activate` ya existen; la interfaz para usarlas llega con el editor (8.2)
 - [ ] Añadir, ocultar, bloquear, duplicar y borrar elementos del widget (texto, barra, disco, imagen, caja) — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.2
 - [ ] Formas no rectangulares: círculo, semicírculo, triángulos de esquina, rombo, paralelogramo y hexágono — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.3
 - [ ] Fondos y rellenos: color, degradado e imagen propia, con borde, sombra y desenfoque del fondo — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.3

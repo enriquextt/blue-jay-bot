@@ -50,7 +50,9 @@
     "playlistInvalid": "The name is not valid or there are too many playlists.",
     "playlistNotFound": "That playlist no longer exists.",
     "queueEmpty": "Nothing is playing or queued.",
-    "messageInvalid": "The text is not valid: 400 characters at most and only the variables that message already has."
+    "messageInvalid": "The text is not valid: 400 characters at most and only the variables that message already has.",
+    "layoutInvalid": "The widget layout is not valid, or there are too many.",
+    "layoutNotFound": "That widget layout no longer exists."
   },
   "notices": {
     "skippedUnavailable": "Skipped, unavailable: {{title}}",
@@ -226,7 +228,10 @@
   "widget": {
     "requestedBy": "requested by {{user}}",
     "testTitle": "Test song",
-    "testArtist": "Blue Jay Bot"
+    "testArtist": "Blue Jay Bot",
+    "templates": {
+      "classic": "Classic"
+    }
   },
   "history": {
     "title": "History",

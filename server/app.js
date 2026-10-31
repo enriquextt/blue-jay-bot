@@ -19,6 +19,7 @@ import { PlaybackQueue } from './queue/playback-queue.js';
 import { Settings } from './settings/settings.js';
 import { PlayerState } from './state/player-state.js';
 import { trackKey } from './tracks.js';
+import { WidgetLayouts } from './widget/layouts.js';
 import { createChannel } from './ws/channel.js';
 import { fetchPlaylistVideos, fetchVideoInfo, fetchVideoTitle, searchVideoId } from './youtube/youtube.js';
 
@@ -60,6 +61,7 @@ export async function createServer({
   const playerState = new PlayerState({ kv });
   const locales = await loadLocales();
   const messages = new Messages({ kv, locales });
+  const widgetLayouts = new WidgetLayouts({ kv });
 
   const queue = new PlaybackQueue({
     fallback: () => baseList.next(),
@@ -144,6 +146,7 @@ export async function createServer({
     playlists,
     settings,
     messages,
+    widgetLayouts,
     language: LOCALES.includes(language) ? language : 'es',
     getState,
     fetchTitle,

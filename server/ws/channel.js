@@ -27,6 +27,7 @@ export function createChannel({
   playlists,
   settings,
   messages,
+  widgetLayouts,
   language,
   getState,
   fetchTitle,
@@ -40,6 +41,8 @@ export function createChannel({
   const clients = new Set();
   // Widgets de OBS (`/ws?view=widget`): solo leen el estado de reproducción, nunca mandan órdenes.
   const widgets = new Set();
+  // Layout que pidió cada widget con `?layout=`; sin él, o si ya no existe, se usa el activo.
+  const widgetLayoutIds = new WeakMap();
   let progress = null;
 
   function send(socket, message) {
@@ -92,12 +95,21 @@ export function createChannel({
   const playlistsMessage = () => ({ type: 'playlists', data: playlists.list() });
   const settingsMessage = () => ({ type: 'settings', data: settings.get() });
   const messagesMessage = () => ({ type: 'messages', data: { language, items: messages.list() } });
+  const widgetLayoutsMessage = () => ({ type: 'widget.layouts', data: { active: widgetLayouts.activeId(), layouts: widgetLayouts.list() } });
+
+  function sendWidgetLayout(socket) {
+    send(socket, { type: 'widget.layout', data: widgetLayouts.resolve(widgetLayoutIds.get(socket)) });
+  }
 
   // El historial puede ser grande: solo se avisa del cambio y cada panel vuelve a pedir lo que está mirando.
   history.on('change', () => broadcast({ type: 'history.changed' }));
   playlists.on('change', () => broadcast(playlistsMessage()));
   settings.on('change', () => broadcast(settingsMessage()));
   messages.on('change', () => broadcast(messagesMessage()));
+  widgetLayouts.on('change', () => {
+    broadcast(widgetLayoutsMessage());
+    for (const socket of widgets) sendWidgetLayout(socket);
+  });
 
   function baseListMessage() {
     return { type: 'baselist', data: { items: baseList.list(), banned: blacklist.list() } };
@@ -198,6 +210,10 @@ export function createChannel({
     send(socket, { type: 'error', key });
   }
 
+  function isObject(value) {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
   function isId(value) {
     return typeof value === 'string' && value.length > 0 && value.length <= MAX_ID_LENGTH;
   }
@@ -286,6 +302,33 @@ export function createChannel({
         if (queue.snapshot().current?.id !== id) return;
         progress = { id, position: Math.min(position, duration), duration, paused };
         return broadcastWidgets({ type: 'progress', data: progress });
+      }
+
+      case 'widget.layout.save': {
+        const saved = widgetLayouts.save(isObject(command.layout) ? command.layout : {});
+        if (!saved) return sendError(socket, 'errors.layoutInvalid');
+        return send(socket, { type: 'widget.layout.saved', id: saved.id });
+      }
+
+      case 'widget.layout.duplicate': {
+        if (!isId(command.id) || typeof command.name !== 'string') return sendError(socket, 'errors.invalidMessage');
+        if (!widgetLayouts.get(command.id)) return sendError(socket, 'errors.layoutNotFound');
+
+        const copy = widgetLayouts.duplicate(command.id, command.name);
+        if (!copy) return sendError(socket, 'errors.layoutInvalid');
+        return send(socket, { type: 'widget.layout.saved', id: copy.id });
+      }
+
+      case 'widget.layout.delete': {
+        if (!isId(command.id)) return sendError(socket, 'errors.invalidMessage');
+        if (!widgetLayouts.remove(command.id)) return sendError(socket, 'errors.layoutNotFound');
+        return;
+      }
+
+      case 'widget.layout.activate': {
+        if (!isId(command.id)) return sendError(socket, 'errors.invalidMessage');
+        if (!widgetLayouts.activate(command.id)) return sendError(socket, 'errors.layoutNotFound');
+        return;
       }
 
       case 'widget.test': {
@@ -447,8 +490,12 @@ export function createChannel({
   }
 
   wss.on('connection', (socket, request) => {
-    if (new URL(request.url, 'http://localhost').searchParams.get('view') === 'widget') {
+    const params = new URL(request.url, 'http://localhost').searchParams;
+    if (params.get('view') === 'widget') {
       widgets.add(socket);
+      const layoutId = params.get('layout');
+      if (isId(layoutId)) widgetLayoutIds.set(socket, layoutId);
+      sendWidgetLayout(socket);
       send(socket, { type: 'state', data: widgetState() });
       if (progress) send(socket, { type: 'progress', data: progress });
       socket.on('close', () => widgets.delete(socket));
@@ -463,6 +510,7 @@ export function createChannel({
     send(socket, playlistsMessage());
     send(socket, settingsMessage());
     send(socket, messagesMessage());
+    send(socket, widgetLayoutsMessage());
     send(socket, { type: 'history.changed' });
 
     socket.on('message', (raw) => {

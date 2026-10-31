@@ -71,6 +71,8 @@ Ruta: `ws://<host>/ws`. Todos los cambios de estado se difunden a todos los clie
 | `playlists` | `data`: `[{ id, name, count }]` | Al conectar y después de cada cambio en las listas de reproducción (crear, renombrar, eliminar, añadir o quitar pistas) |
 | `playlist` | `data`: `{ id, name, items }` | Respuesta a `playlist.open`. Solo llega al cliente que preguntó. Cada ítem es una pista (ver sección 4) con un `id` numérico propio de la lista |
 | `playlist.created` | `id` | Respuesta a `playlist.create`. Solo llega al cliente que lo pidió, después del mensaje `playlists` que ya incluye la lista nueva |
+| `widget.layouts` | `data`: `{ active, layouts }` | Al conectar y después de cada cambio de layouts. `layouts` son todos, los de serie primero (`builtin: true`, solo lectura) y los propios después; cada uno es `{ id, builtin, name, canvas, showSeconds, idleOpacity, elements }` (ver sección 3.4) |
+| `widget.layout.saved` | `id` | Respuesta a `widget.layout.save` y `widget.layout.duplicate`. Solo llega al cliente que lo pidió, después del mensaje `widget.layouts` que ya incluye el layout |
 | `history.changed` | — | Al conectar y cada vez que cambia algún historial. No lleva datos: el cliente vuelve a pedir lo que está mirando con `history.query` |
 | `history.results` | `kind`, `seq`, `total`, `items` | Respuesta a `history.query`. Solo llega al cliente que preguntó; `seq` es el que envió |
 | `notice` | `key`, `params?` | Aviso informativo (por ejemplo, saltada una canción no disponible) |
@@ -114,6 +116,10 @@ Ejemplo de aviso:
 | `message.setText` | `locale` (`es` o `en`), `leaf` (clave de la forma, por ejemplo `chat.sr.added`), `text` | Cambia el texto de una forma del mensaje en ese idioma y lo difunde en `messages`. Un texto vacío, o igual al original, vuelve al original. Si no es válido, `errors.messageInvalid` y no cambia nada |
 | `message.setEnabled` | `key` (por ejemplo `chat.sr.added`), `enabled` (booleano) | Activa o desactiva el mensaje, con todas sus formas, sin tocar su texto |
 | `message.reset` | `key` | Devuelve el mensaje a su texto original en todos los idiomas y lo activa |
+| `widget.layout.save` | `layout`: `{ id?, name, canvas, showSeconds?, idleOpacity?, elements }` | Guarda un layout. Con el `id` de uno propio lo reemplaza; sin `id`, con uno desconocido o con el de uno de serie, crea uno nuevo (guardar como). Responde `widget.layout.saved`. Si no es válido (ver sección 3.4) o ya hay 30 propios: `errors.layoutInvalid` |
+| `widget.layout.duplicate` | `id`, `name` | Copia un layout, también uno de serie, con otro nombre. Responde `widget.layout.saved`. Si no existe: `errors.layoutNotFound`; sin `name` de texto: `errors.invalidMessage`; con un nombre no válido o el tope alcanzado: `errors.layoutInvalid` |
+| `widget.layout.delete` | `id` | Borra un layout propio. Si era el activo, el activo pasa a ser el Clásico. Uno de serie o desconocido: `errors.layoutNotFound` |
+| `widget.layout.activate` | `id` | Elige el layout que usan los widgets que no piden uno con `?layout=`. Desconocido: `errors.layoutNotFound` |
 | `history.query` | `kind` (`requests` o `plays`), `seq?`, `user?` (texto contenido en el usuario, máximo 50 caracteres), `outcome?` (solo peticiones; ver sección 6.5), `from?` / `to?` (milisegundos, ambos incluidos), `offset?` (por defecto 0), `limit?` (por defecto 50, máximo 500) | Devuelve `history.results` con lo más reciente primero. En `requests`, cada ítem es `{ id, createdAt, platform, user, command, input, kind, outcome, track }`; en `plays`, `{ id, playedAt, origin, requestedBy, track }`. `track` es `null` si la petición se rechazó antes de elegir una canción. `user` filtra por el usuario (`requests`) o por quien pidió la canción (`plays`) |
 | `history.delete` | `kind`, `id` (entero) | Borra una fila del historial |
 | `history.clear` | `kind` | Vacía ese historial; el otro no se toca |
@@ -154,8 +160,41 @@ Reglas de la lista base:
 | `errors.messageInvalid` | El texto de un mensaje del bot supera los 400 caracteres o usa una variable que ese mensaje no tiene |
 | `errors.playlistInvalid` | El nombre de la lista no es válido o ya hay 100 listas |
 | `errors.playlistNotFound` | La lista ya no existe |
+| `errors.layoutInvalid` | El layout del widget no es válido (ver sección 3.4) o ya hay 30 propios |
+| `errors.layoutNotFound` | El layout del widget ya no existe, o es de serie y no se puede borrar |
 | `errors.queueEmpty` | Se intentó guardar la cola y no hay nada sonando ni pendiente |
 | `errors.serverError` | Error interno inesperado |
+
+### 3.4 Widget y layouts
+
+El widget de OBS se conecta a `ws://<host>/ws?view=widget`, con `&layout=<id>` opcional. Es de solo lectura: se ignora todo lo que envía. Recibe:
+
+| `type` | Campos | Cuándo |
+|---|---|---|
+| `widget.layout` | `data`: el layout que le toca (ver abajo) | Al conectar, antes de `state`, y después de cada cambio de layouts. Es el de `?layout=` si existe y, si no, el activo |
+| `state` | `data`: `{ current }` con `id`, `title`, `artist` y `requestedBy` | Al conectar y en cada cambio de canción |
+| `progress` | `data`: `{ id, position, duration, paused }` | Lo que informa el reproductor del panel |
+| `widget.show` | `data`: `{ seconds }` | `!queue` y `!song`. El widget usa `showSeconds` de su layout si lo tiene |
+| `widget.test` | `data`: `{ duration }` | Botón de prueba del panel |
+
+Layout:
+
+```
+{ id, builtin, name, canvas: { width, height }, showSeconds, idleOpacity, elements: [Element] }
+
+Element { id, type, x, y, width, height, visible, locked, rotation, opacity, ...propiedades del tipo }
+  text      template, color, fontSize, fontWeight, align, valign, maxLines
+  progress  color, track, radius
+  disc      accent
+  box       shape: { type, radius }, fill: { type, color }
+```
+
+- Los valores permitidos y sus rangos están en `public/js/widget/catalog.js`, que el servidor importa para validar. Tamaño del lienzo: 100–2.000 × 40–1.200 (enteros). `showSeconds`: 1–120 (10 por defecto). `idleOpacity`: 0–1 (0 por defecto). Hasta 40 elementos con `id` único (`[A-Za-z0-9_-]`, máximo 32). Nombre de 1 a 60 caracteres. Los colores son `#rrggbb` o `#rrggbbaa`.
+- `template` (máximo 200 caracteres, una línea) admite las variables `{title}`, `{artist}`, `{requester}`, `{meta}`, `{position}`, `{duration}` y `{remaining}`. `{requester}` y `{meta}` (artista y quién la pidió) salen traducidos con el `?lang=` del widget. Una variable desconocida se deja tal cual.
+- Un campo ausente toma su valor por defecto; uno presente y no válido invalida todo el layout. Los campos desconocidos se descartan y nunca se admite CSS ni HTML libre: el widget pinta el texto con `textContent`.
+- Los layouts de serie (`builtin: true`, hoy solo `classic`) no se modifican ni se borran; se duplican para editarlos. Los propios, hasta 30, se guardan en la tabla `kv` (`widget.layouts` y `widget.active`).
+- El lienzo se escala por igual para caber en la fuente de navegador y queda anclado arriba a la izquierda.
+- Con `?idle=<0..1>` en la dirección, el widget ignora `idleOpacity` del layout.
 
 ## 4. Modelo de datos de una canción
 

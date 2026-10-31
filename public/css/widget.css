@@ -2,6 +2,8 @@
 html,
 body {
   margin: 0;
+  width: 100%;
+  height: 100%;
   background: transparent;
   overflow: hidden;
 }
@@ -12,38 +14,67 @@ body {
   line-height: 1.3;
 }
 
-/* En reposo el widget es invisible (o casi, con `?idle=0.3`); `.shown` lo hace visible unos segundos. */
-.card {
-  --idle-opacity: 0;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  box-sizing: border-box;
+#root {
+  position: relative;
   width: 100%;
-  padding: 14px 18px;
-  border-radius: 12px;
-  background: rgba(18, 21, 28, 0.82);
+  height: 100%;
+}
+
+/* El lienzo tiene el tamaño del layout en píxeles y `render.js` lo escala para que quepa. */
+/* En reposo es invisible (o casi, con `idleOpacity`); `.shown` lo hace visible unos segundos. */
+.stage {
+  --idle-opacity: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
   opacity: var(--idle-opacity);
   transition: opacity 0.4s;
 }
 
-.card.shown {
+.stage.shown {
   opacity: 1;
 }
 
-.card[hidden] {
-  display: flex;
+/* Sin nada que mostrar no se ve ni siquiera con opacidad en reposo. */
+.stage.empty {
   opacity: 0;
 }
 
-.disc {
-  flex: none;
-  width: 64px;
-  height: 64px;
+.el {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.el.text {
+  display: flex;
+  flex-direction: column;
+}
+
+.text-body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.el.progress {
+  overflow: hidden;
+}
+
+.bar {
+  width: 0;
+  height: 100%;
+}
+
+.el.disc svg {
+  display: block;
+  width: 100%;
+  height: 100%;
   animation: spin 3s linear infinite;
 }
 
-.card.paused .disc {
+.stage.paused .el.disc svg {
   animation-play-state: paused;
 }
 
@@ -51,57 +82,4 @@ body {
   to {
     transform: rotate(360deg);
   }
-}
-
-.content {
-  flex: 1;
-  min-width: 0;
-}
-
-.title {
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.meta {
-  margin: 2px 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #c4cbd8;
-  font-size: 0.9rem;
-}
-
-.meta:empty {
-  display: none;
-}
-
-.progress {
-  height: 6px;
-  margin-top: 10px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.18);
-  overflow: hidden;
-}
-
-.bar {
-  width: 0;
-  height: 100%;
-  background: #4f8cff;
-}
-
-.times {
-  display: flex;
-  justify-content: space-between;
-  margin: 4px 0 0;
-  color: #c4cbd8;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
 }
