@@ -11,6 +11,7 @@ import { createSettingsView } from './settings-view.js';
 
 const RECONNECT_DELAY_MS = 2000;
 const PROGRESS_INTERVAL_MS = 1000;
+const NEXT_TRACK_DELAY_MS = 1000;
 const NOTICE_DURATION_MS = 4000;
 const VOLUME_SEND_INTERVAL_MS = 100;
 const SEARCH_DEBOUNCE_MS = 250;
@@ -576,6 +577,15 @@ function setupSortable() {
   });
 }
 
+// Pausa breve antes de pasar a la siguiente pista. Si mientras tanto cambia la pista (por ejemplo, con "siguiente"),
+// el servidor ignora el aviso porque el id ya no es el de la que suena.
+function reportEnded() {
+  const id = loadedId;
+  if (!id) return;
+
+  setTimeout(() => send({ type: 'playback.ended', id }), NEXT_TRACK_DELAY_MS);
+}
+
 async function start() {
   await initI18n();
   diagnostics = createDiagnosticsView({ send, connectionText: () => t(CONNECTION_KEYS[connection]) });
@@ -601,9 +611,7 @@ async function start() {
 
   localPlayer = createLocalPlayer({
     element: elements.localAudio,
-    onEnded: () => {
-      if (loadedId) send({ type: 'playback.ended', id: loadedId });
-    },
+    onEnded: reportEnded,
     onUnavailable: () => {
       if (loadedId) send({ type: 'playback.unavailable', id: loadedId });
     },
@@ -613,9 +621,7 @@ async function start() {
 
   try {
     player = await createPlayer({
-      onEnded: () => {
-        if (loadedId) send({ type: 'playback.ended', id: loadedId });
-      },
+      onEnded: reportEnded,
       onUnavailable: () => {
         if (loadedId) send({ type: 'playback.unavailable', id: loadedId });
       },
