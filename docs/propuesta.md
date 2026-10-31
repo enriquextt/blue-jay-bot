@@ -130,6 +130,120 @@ Dos columnas (decidido en la fase 5.5): a la izquierda, un tercio con **Sonando 
 - El idioma se detecta por la configuración guardada y puede cambiarse desde el panel.
 - Regla: ninguna cadena visible queda fuera de los archivos de locales (ver `agents.md`).
 
+### 3.8 Editor del widget (fase 8, propuesta pendiente de confirmar)
+
+Hoy el widget (`widget.html`, `widget.css`, `widget.js`) tiene la estructura fija: un disco, título, artista, barra y tiempos dentro de una tarjeta. La fase 8 la convierte en un **layout** (datos) que un único renderizador dibuja, y añade un editor visual en el panel.
+
+#### Modelo del layout
+
+Un layout es un JSON validado en el servidor:
+
+```
+{ name, canvas: { width, height }, showSeconds, idleOpacity,
+  elements: [ { id, type, visible, locked, x, y, width, height, rotation, opacity,
+                shape, fill, border, shadow, ...propiedades del tipo,
+                animation: { in, out, loop } } ] }
+```
+
+- **Lienzo de tamaño fijo** (por defecto 600 × 140). El widget lo escala de forma uniforme para caber en la fuente de navegador de OBS, así el mismo layout sirve a cualquier tamaño de fuente. Sustituye al ancho 100 % actual.
+- **Todos los elementos son iguales**: una lista ordenada (el orden es el eje Z). Se puede ocultar, bloquear, duplicar y borrar cualquiera, incluidos los que vienen de serie, y añadir más desde un catálogo. El layout por defecto reproduce el widget actual, así que quien no abra el editor no nota cambios.
+- Posición, tamaño y rotación son números en unidades del lienzo. «Anclar a esquina o borde» es un botón del editor que calcula `x` e `y`; no se guarda como anclaje.
+
+#### Tipos de elemento
+
+| Tipo | Contenido | Notas |
+|---|---|---|
+| `text` | Plantilla de texto con variables | `{title}` `{artist}` `{requester}` `{position}` `{duration}` `{remaining}`. `{requester}` sale ya traducido («Pedido por X», vacío si no hay) con el `?lang=` del widget. Sirve para el título, el artista o un texto fijo propio |
+| `progress` | Barra de progreso | Color, fondo, altura, esquinas y forma |
+| `disc` | Disco giratorio actual | Vinilo SVG existente; colores del centro editables |
+| `image` | Imagen propia subida por el usuario | Ajuste `cover` / `contain` y posición |
+| `box` | Caja decorativa | Solo relleno, borde y forma: fondos, triángulos de esquina, franjas |
+| `cover` (opcional) | Miniatura de YouTube o carátula local | Ver «Preguntas» |
+
+#### Formas (no solo rectángulos)
+
+Cualquier elemento, no solo `box`, tiene una **forma**. Catálogo inicial: rectángulo, rectángulo redondeado (radio editable), círculo / elipse, semicírculo (4 orientaciones), triángulo rectángulo en cada esquina (4), triángulo isósceles (4 orientaciones), rombo, paralelogramo y hexágono.
+
+- Cada forma se define **una sola vez** como un camino SVG normalizado (0 a 1). Con él se dibuja el relleno y el borde (SVG, con `vector-effect: non-scaling-stroke` para que el grosor no se deforme al redimensionar) y se recorta el contenido (imagen, texto, barra) con un `clipPath` de unidades `objectBoundingBox`. Así la imagen, el degradado y el borde siguen la misma silueta.
+- La sombra usa `filter: drop-shadow`, que sí respeta la forma (`box-shadow` no lo haría).
+- Un triángulo «que se acomode en una esquina» es la forma triángulo rectángulo con la orientación de esa esquina más el botón de anclar; se puede dar la vuelta y combinar con otras cajas.
+
+#### Fondos, relleno y bordes
+
+- **Relleno**: color sólido con transparencia; degradado lineal (ángulo) o radial con 2 a 4 paradas; imagen propia (con ajuste y posición); ninguno.
+- **Borde**: grosor, color y estilo (continuo / discontinuo). **Sombra**: desplazamiento, desenfoque y color. **Desenfoque del fondo** (`backdrop-filter`) para el efecto cristal. **Opacidad** y **rotación** por elemento.
+
+#### Texto y fuentes
+
+- Propiedades: familia, tamaño, grosor, cursiva, color (sólido o degradado), alineación, interlineado, espaciado de letras, mayúsculas, contorno, sombra y comportamiento si no cabe: **recortar con «…»**, **ajustar a N líneas** o **desplazar como un rótulo** (marquesina) para títulos largos.
+- **Fuentes**: un catálogo empaquetado de unas 8 fuentes con licencia libre (OFL), servidas desde `public/fonts/` junto a sus licencias (sin dependencias de npm ni de internet, para que OBS funcione sin conexión), más las genéricas del sistema. Además, **fuente propia**: el usuario sube un `.woff2`, `.ttf` u `.otf` y queda como activo del layout.
+- Los layouts nunca guardan un nombre de fuente libre ni CSS: solo un valor del catálogo o el id de un activo propio.
+
+#### Imágenes y fuentes propias (activos)
+
+- Subida por `POST /api/widget/assets` con el cuerpo en bruto (sin `@fastify/multipart`, para no añadir dependencias) y **solo desde loopback**, como `library.setFolder`.
+- Tipos admitidos: PNG, JPEG, WebP y GIF para imágenes; WOFF2, TTF y OTF para fuentes. El tipo se comprueba por los **bytes iniciales**, no por la extensión ni por la cabecera. **SVG queda fuera**: podría llevar scripts si se abriera como página.
+- Límites: 2 MB por imagen, 1 MB por fuente, 50 activos y 50 MB en total. Guardados en `data/widget-assets/<sha256>.<ext>` (ignorado por git); el id es el hash, el cliente nunca elige una ruta.
+- Se sirven en `GET /widget-assets/:id` con `X-Content-Type-Options: nosniff` y el tipo fijado por el servidor. Sin URLs remotas: un layout no puede hacer que OBS cargue nada de internet.
+- Un activo sin ningún layout que lo use se puede borrar desde el editor.
+
+#### Animaciones y plantillas
+
+Tres ranuras por elemento, cada una con **preset**, duración, retardo y curva (entre 4 curvas):
+
+| Ranura | Presets iniciales |
+|---|---|
+| Entrada | ninguna, fundido, deslizar desde izquierda / derecha / arriba / abajo, zoom, rebote, giro, **revelado** (barrido con recorte), desenfoque, máquina de escribir (texto) |
+| Salida | los mismos al revés |
+| Bucle | ninguno, girar (el disco actual), pulso, flotar, brillo |
+
+- Se implementan con `@keyframes` CSS y variables (`--anim-duration`, `--anim-delay`), sin librerías. Un preset es un nombre del catálogo; el layout no guarda CSS.
+- **Ciclo de vida del widget**: oculto → entrando → visible → saliendo → oculto. `showSeconds` pasa a ser un ajuste del layout (hoy 10 s fijo). Si la pista cambia mientras se ve, el texto hace una transición de contenido sin repetir la entrada.
+- **Plantillas de animación**: un clic aplica entrada y salida a todos los elementos con retardos escalonados («Deslizar escalonado», «Revelado», «Zoom suave»…).
+- **Plantillas de layout** (solo lectura, se duplican para editarlas): «Clásico» (el actual), «Compacto», «Solo barra», «Disco grande», «Banner con triángulo en la esquina» y «Semicírculo». Sirven de ejemplo de todas las formas.
+
+#### Arquitectura
+
+- **Un único renderizador** en `public/js/widget/render.js`, usado por `widget.html` y por el lienzo del editor, así que lo que se ve al editar es lo que sale en OBS. Reutiliza el reloj de `widget.js` para el progreso.
+- **Catálogo** (formas, presets, fuentes, variables) en `public/js/widget/catalog.js`: un módulo de datos sin DOM que importan el cliente y el servidor, para que la validación y la interfaz no se desincronicen.
+- **Validación** en `server/widget/layout.js`, al guardar y al cargar: enumeraciones del catálogo, números dentro de rango, colores con expresión estricta (`#rrggbb` / `#rrggbbaa`), textos de hasta 200 caracteres, hasta 40 elementos por layout y activos que existen. El widget pinta el texto con `textContent` (nunca `innerHTML`). Lo inválido se rechaza al guardar y se descarta al arrancar.
+- **Persistencia**: tabla `kv` de SQLite (`widget.layouts`, hasta 30 layouts, y `widget.active`), como los mensajes del bot. Los activos van a disco. Entra en la exportación de la fase 9 (layouts sí; los activos se empaquetan aparte).
+- **Sincronización**: el widget se conecta con `/ws?view=widget[&layout=<id>]`; sin `layout` usa el activo. Varias fuentes de navegador pueden mostrar layouts distintos. Mensajes nuevos: del panel `widget.layout.save`, `.delete`, `.duplicate`, `.activate` y `widget.asset.delete`; hacia los widgets `widget.layout` (al conectar y en cada guardado, solo si les afecta). El widget sigue siendo de solo lectura.
+- **Prueba**: `widget.test` admite un layout borrador en el mensaje para que «Probar en OBS» muestre el diseño sin guardarlo ni tocar la cola.
+
+#### Interfaz del editor
+
+Pestaña nueva **Widget** en el panel, en tres zonas:
+
+1. **Capas** (izquierda): lista ordenable con ojo (ocultar), candado y «Añadir elemento» (texto, imagen, caja, forma, barra, disco).
+2. **Lienzo** (centro): vista en vivo con datos de ejemplo (incluida una opción de título largo), arrastrar, ocho tiradores de tamaño, tirador de rotación, guías magnéticas contra los bordes y otros elementos, flechas para empujar, deshacer y rehacer, y «Repetir animación».
+3. **Propiedades** (derecha): posición y tamaño, forma, relleno, borde y sombra, texto, imagen, animación.
+
+Barra superior: selector de layout, nuevo desde plantilla, duplicar, renombrar, borrar, «Usar este», copiar la dirección con `?layout=`, guardar, descartar cambios y «Probar en OBS». Sin librerías de arrastre: se hace con eventos de puntero (unas 400 líneas); `SortableJS` ya presente cubre el orden de capas.
+
+#### Subfases
+
+| Subfase | Contenido | Resultado |
+|---|---|---|
+| 8.1 | Modelo, validación, persistencia y renderizador común; el widget se dibuja desde el layout «Clásico»; WebSocket `widget.layout`; pruebas | Mismo widget, ya basado en datos |
+| 8.2 | Editor: capas, mover, redimensionar, rotar, ocultar, bloquear, añadir y borrar, opacidad, varios layouts y «Usar este» | Editar la disposición |
+| 8.3 | Formas, rellenos (color, degradado, imagen), bordes, sombras y subida de imágenes | Estética a medida |
+| 8.4 | Texto, fuentes empaquetadas y propias, marquesina | Tipografía a medida |
+| 8.5 | Animaciones, plantillas de animación y plantillas de layout, «Probar en OBS» con borrador | Entradas y salidas con estilo |
+
+Cada subfase deja el widget funcionando. Todo texto del editor y los nombres del catálogo salen de `es.json` y `en.json`; los nombres de los layouts y los textos fijos que escribe el usuario son contenido suyo.
+
+#### Dependencias
+
+Ninguna nueva. Las fuentes empaquetadas son archivos (OFL), no paquetes de npm.
+
+#### Preguntas para confirmar
+
+1. **Miniatura / carátula (`cover`)**: ¿se incluye? Exige que el servidor envíe al widget la miniatura de YouTube (hoy el widget no recibe el id del vídeo a propósito) o la carátula de las etiquetas de la pista local. Recomendado: sí, como cierre de la 8.3.
+2. **Lienzo fijo con escalado** en lugar del ancho 100 % actual. Recomendado: sí. Cambia cómo se ajusta la fuente en OBS (se escala el diseño, no se reflowea).
+3. **SVG propio**: excluido por seguridad. ¿Basta con PNG, JPEG, WebP y GIF?
+4. **Fuentes de Google en línea**: descartadas (offline y privacidad); en su lugar, catálogo empaquetado más fuente propia.
+
 ## 4. Fases
 
 | Fase | Contenido | Resultado esperado |
@@ -144,7 +258,7 @@ Dos columnas (decidido en la fase 5.5): a la izquierda, un tercio con **Sonando 
 | 5.5. Mensajes del bot | Mensajes del chat editables por idioma y activables o desactivables uno a uno, con vista previa; panel en dos columnas (1/3 y 2/3) | El streamer decide qué dice el bot y con qué palabras |
 | 6. Widget OBS | Widget compacto, WebSocket en vivo, prueba | Widget en OBS (hecha) |
 | 7. Operación | Diagnóstico y controles del panel (reordenar, eliminar y saltar pistas; play, pausa, siguiente, aleatorio) | Panel completo y estado del sistema a la vista |
-| 8. Editor del widget | Editor visual de layouts (mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento), con layouts guardados y sincronizados con los widgets | Widget a medida sin tocar CSS |
+| 8. Editor del widget | Editor visual de layouts (mover, redimensionar, rotar, ocultar, añadir elementos, opacidad, formas, fondos, fuentes e imágenes propias, animaciones de entrada y salida y plantillas), con layouts guardados y sincronizados con los widgets. Ver 3.8 | Widget a medida sin tocar CSS |
 | 9. Exportar e importar | Exportar e importar ajustes, layouts y mensajes personalizados, sin incluir claves de API ni tokens | Copias de seguridad y cambio de equipo |
 | 10. Opcional | Spotify, adaptadores de Kick y YouTube (chat) | Ampliaciones |
 
@@ -197,3 +311,4 @@ Todas las preguntas están respondidas. Las decisiones se reflejan en las seccio
 | 2026-10-30 | Replanteo de las fases finales. Streamer.bot queda descartado del todo: se quita del checklist la verificación de la versión del import y el diagnóstico de la fase 7 ya no incluye «versión del import» ni «puente del widget». El editor visual de layouts del widget pasa de opcional a la fase 8, y exportar e importar (ajustes, layouts y mensajes personalizados, sin claves ni tokens) se mueve a la fase 9 para que pueda incluir los layouts. La fase 7 queda en diagnóstico y controles del panel. Los opcionales (Spotify, chat de Kick y YouTube) pasan a la fase 10. |
 | 2026-10-30 | **Fase 7 implementada.** Lo que ya existía (arrastrar para reordenar, «Quitar», «Siguiente») se da por hecho; se añade lo que faltaba. **Pausa:** vive en el servidor (`paused` en `state`, orden `playback.pause`), no en cada panel, porque todos los paneles abiertos reproducen audio y así se pausan juntos. Solo tiene sentido con una pista sonando y se rearma sola al cambiar de pista (`advance`, `replaceCurrent`); no se guarda entre reinicios. No se informa al servidor de las pausas hechas con los controles del propio reproductor (YouTube o `<audio>`): evitaría el eco entre paneles a cambio de que el botón pueda mostrar un estado desfasado hasta la siguiente pulsación. **Aleatorio** se interpreta como el modo SHUFFLE de la lista base (no se mezcla la cola, que son peticiones de viewers): el botón junto a «Siguiente» alterna `baselist.start` entre `shuffle` y `sequential` y refleja el estado actual. **Diagnóstico:** `diagnostics.get` devuelve versión, tiempo activo, si hay clave de YouTube (booleano), estado de Twitch (`connected`, `connecting` o `disabled`, con un `status()` nuevo en el adaptador) y el número de paneles y widgets conectados; nunca claves, rutas ni credenciales. Se pide al conectar y con el botón «Actualizar». Sin dependencias nuevas.
 | 2026-10-30 | **Paginación de la biblioteca local.** «Mostrando 50 de 56» no era un filtro sino el tope de 50 resultados de `library.search`, sin forma de ver el resto con el buscador vacío. `library.search` acepta ahora `offset` (el servidor fija la página en 50 y la devuelve como `limit`, para que el cliente no repita la constante) y el panel muestra «Anterior / Siguiente» con «Pistas 51 a 56 de 56»; el paginador se oculta si todo cabe en una página. Escribir en el buscador vuelve a la primera página; si una página deja de existir (reescaneo, veto) se vuelve a la última, y se descartan las respuestas de una página o búsqueda ya superada. Las búsquedas del chat no cambian (`offset` es 0). Sin dependencias nuevas.
+| 2026-10-31 | **Propuesta de diseño de la fase 8 (pendiente de confirmar, ver 3.8).** Layout como datos validados en el servidor (SQLite `kv`), un único renderizador compartido por el widget y el editor, lienzo de tamaño fijo escalado, elementos iguales (texto, barra, disco, imagen, caja) que se pueden ocultar, añadir y borrar, formas definidas una vez como caminos SVG normalizados (rectángulo, círculo, semicírculo, triángulos de esquina, rombo, paralelogramo, hexágono), rellenos con color, degradado o imagen propia, fuentes empaquetadas (OFL) y propias, animaciones de entrada, salida y bucle por presets CSS con plantillas, imágenes y fuentes subidas por HTTP solo desde loopback con validación por bytes (sin SVG) y sin URLs remotas. Sin dependencias nuevas. Cinco subfases (8.1 a 8.5). |

@@ -97,8 +97,16 @@ Leyenda de la columna de decisión:
 - [x] `!song`: información de la canción actual — **Adaptar**. En pistas locales añade artista, álbum y la primera nota de las etiquetas, y el título lleva entre paréntesis el subtítulo (`TIT3`) si lo tiene
 - [x] Actualización en vivo mediante WebSocket — **Mantener** (fase 6). El widget se conecta a `/ws?view=widget`, de solo lectura, y solo recibe la canción actual y su progreso. El progreso lo envía el reproductor del panel cada segundo, así que con el panel cerrado el widget no avanza
 - [ ] Audio opcional del widget (solo YouTube) — **Opcional**
-- [ ] Editor visual: mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento — **Mantener** (decidido añadirlo). Asignado a la fase 8
-- [ ] Guardar y sincronizar layouts con las fuentes del widget — **Mantener** (decidido añadirlo). Asignado a la fase 8
+- [ ] Editor visual: mover, redimensionar, rotar, ocultar, opacidad y fondo de cada elemento — **Mantener** (decidido añadirlo). Asignado a la fase 8 (subfase 8.2)
+- [ ] Guardar y sincronizar layouts con las fuentes del widget — **Mantener** (decidido añadirlo). Asignado a la fase 8 (subfase 8.1); varios layouts, uno por fuente de navegador con `?layout=`
+- [ ] Añadir, ocultar, bloquear, duplicar y borrar elementos del widget (texto, barra, disco, imagen, caja) — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.2
+- [ ] Formas no rectangulares: círculo, semicírculo, triángulos de esquina, rombo, paralelogramo y hexágono — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.3
+- [ ] Fondos y rellenos: color, degradado e imagen propia, con borde, sombra y desenfoque del fondo — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.3
+- [ ] Imágenes propias en el widget (PNG, JPEG, WebP y GIF) — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.3
+- [ ] Estilo de texto y fuentes (catálogo empaquetado y fuente propia), con marquesina para títulos largos — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.4
+- [ ] Animaciones de entrada, salida y bucle por elemento, y plantillas de animación seleccionables — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.5
+- [ ] Plantillas de layout (Clásico, Compacto, Solo barra, Disco grande, Banner con triángulo y Semicírculo) — **Mantener** (requerimiento nuevo). Fase 8, subfase 8.5
+- [ ] Miniatura de YouTube o carátula local como elemento del widget — **Opcional**. Fase 8, pendiente de confirmar (ver `docs/propuesta.md`, 3.8)
 - [ ] Badge de estado `!SR` editable — **Opcional**
 - [x] Botón de prueba que envía una tarjeta temporal sin tocar la cola real — **Mantener** (fase 6). Pestaña Ajustes; la tarjeta dura 8 segundos
 - [x] URL del widget generada automáticamente desde Ajustes — **Mantener** (fase 6). Con botón de copiar; incluye `?lang=` con el idioma del panel
