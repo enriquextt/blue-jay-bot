@@ -6,7 +6,7 @@ Servidor local de **peticiones de canciones para directos**. Los viewers piden m
 
 Funciona en tu propio equipo: los datos, las claves de API y la música no salen de él. Está escrito en Node.js, con interfaz en español e inglés.
 
-> **Estado: en desarrollo.** Las fases 0 a 6 están terminadas (cola, chat de Twitch, lista base, biblioteca local, etiquetas, límites, historial, persistencia de la cola, mensajes del bot editables y widget de OBS). Faltan las herramientas de operación. Mira [Estado y hoja de ruta](#estado-y-hoja-de-ruta).
+> **Estado: en desarrollo.** Las fases 0 a 8 están terminadas (cola, chat de Twitch, lista base, biblioteca local, etiquetas, límites, historial, persistencia de la cola, mensajes del bot editables, widget de OBS, controles y diagnóstico del panel y editor visual del widget). Falta exportar e importar los ajustes (fase 9). Mira [Estado y hoja de ruta](#estado-y-hoja-de-ruta).
 
 ## Qué hace hoy
 
@@ -166,7 +166,7 @@ data/       Datos locales y credenciales (ignorado por git)
 | 5.5 | Mensajes del bot editables y panel en dos columnas | Hecha |
 | 6 | Widget de OBS | Hecha |
 | 7 | Diagnóstico y controles de reproducción en el panel | Hecha |
-| 8 | Editor visual de layouts del widget | En curso (8.1 a 8.4 hechas: layouts, editor visual, formas, rellenos, imágenes, fuentes y estilo de texto) |
+| 8 | Editor visual de layouts del widget | Hecha |
 | 9 | Exportar e importar ajustes, layouts y mensajes personalizados | Pendiente |
 | 10 | Opcionales: Spotify, chat de Kick y YouTube | Pendiente |
 

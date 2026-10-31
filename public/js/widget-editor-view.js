@@ -14,6 +14,7 @@ import {
 } from './widget/editor-model.js';
 import { ELEMENT_TYPES } from './widget/catalog.js';
 import { isAssetFont, SYSTEM_FONT } from './widget/fonts.js';
+import { applyAnimationTemplate } from './widget/animation-templates.js';
 import { templateValues } from './widget/format.js';
 
 const NUDGE = 1;
@@ -49,6 +50,8 @@ export function createWidgetEditorView({ send, showNotice }) {
     layers: document.querySelector('#we-layers'),
     canvas: document.querySelector('#we-canvas'),
     longTitle: document.querySelector('#we-long-title'),
+    replay: document.querySelector('#we-replay'),
+    testObs: document.querySelector('#we-test'),
     inspector: document.querySelector('#we-inspector'),
     body: document.querySelector('#we-body'),
     empty: document.querySelector('#we-empty'),
@@ -100,6 +103,11 @@ export function createWidgetEditorView({ send, showNotice }) {
       commit();
     },
     onUpload: (file, kind) => uploadAsset(file, kind),
+    onAnimationTemplate: (id) => {
+      session().draft = { ...session().draft, elements: applyAnimationTemplate(session().draft.elements, id) };
+      commit();
+      canvas.cycle();
+    },
     onDeleteAsset: (id) => send({ type: 'widget.asset.delete', id }),
     onAlign: (target) => {
       session().draft = alignElement(session().draft, selectedElementId, target);
@@ -361,6 +369,11 @@ export function createWidgetEditorView({ send, showNotice }) {
 
   el.layout.addEventListener('change', () => select(el.layout.value));
   el.longTitle.addEventListener('change', () => refresh({ layers: false, inspector: false }));
+  el.replay.addEventListener('click', () => canvas.cycle());
+  // Los widgets de OBS dibujan el borrador (aunque no esté guardado) durante unos segundos.
+  el.testObs.addEventListener('click', () => {
+    if (session()) send({ type: 'widget.test', layout: session().draft });
+  });
   el.activate.addEventListener('click', () => send({ type: 'widget.layout.activate', id: selectedId }));
   el.copyUrl.addEventListener('click', async () => {
     const url = `${location.origin}/widget.html?lang=${currentLocale()}&layout=${selectedId}`;

@@ -6,6 +6,7 @@ const JUSTIFY = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
 const MARQUEE_PIXELS_PER_SECOND = 40;
 const MARQUEE_PAUSE_SECONDS = 3;
 const OUTLINE_POINTS = 16;
+const CLOCK_VARIABLES = /\{(position|duration|remaining)\}/;
 
 // Las fuentes subidas se registran la primera vez que las usa un texto; devuelve cuándo están listas (o fallaron:
 // entonces se queda la de reserva).
@@ -112,7 +113,15 @@ export function buildText(element) {
       const text = fillTemplate(element.template, values);
       if (content.textContent === text) return;
 
+      const previous = content.textContent;
       content.textContent = text;
+      // Al cambiar de canción el texto se funde en vez de saltar; no con el tiempo, que cambia cada segundo, ni con
+      // el rótulo, que ya usa la animación del propio texto.
+      if (previous && content === body && !CLOCK_VARIABLES.test(element.template)) {
+        body.classList.remove('swap');
+        void body.offsetWidth;
+        body.classList.add('swap');
+      }
       measure();
     },
   };

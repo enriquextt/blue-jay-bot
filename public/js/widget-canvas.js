@@ -15,7 +15,8 @@ function node(className, parent) {
 // seleccionar, mover, redimensionar y girar. Los cambios no se aplican aquí: se piden con `onGesture(layout)`
 // mientras se arrastra y `onGestureEnd()` al soltar, y quien edita vuelve a llamar a `show`.
 export function createCanvas({ root, onSelect, onGesture, onGestureEnd }) {
-  const renderer = createRenderer(root);
+  // `preview`: el lienzo siempre está visible y solo reproduce la entrada y la salida cuando se pide (`cycle`).
+  const renderer = createRenderer(root, { preview: true });
   const overlay = node('we-overlay', root);
 
   let layout = null;
@@ -154,6 +155,11 @@ export function createCanvas({ root, onSelect, onGesture, onGestureEnd }) {
   new ResizeObserver(draw).observe(root);
 
   return {
+    // Reproduce la entrada, una pausa y la salida del layout que se está viendo.
+    cycle() {
+      renderer.cycle();
+    },
+
     // Dibuja `nextLayout` con `nextView` (los valores de ejemplo) y la selección indicada.
     show(nextLayout, nextSelectedId, nextView) {
       layout = nextLayout;

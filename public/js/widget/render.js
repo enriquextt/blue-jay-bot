@@ -1,3 +1,4 @@
+import { EASINGS } from './catalog.js';
 import { buildSurface } from './surface.js';
 import { buildText } from './text.js';
 
@@ -49,9 +50,20 @@ const BUILDERS = {
   },
 };
 
+// Lo que tarda en terminar una animación de entrada o de salida de un elemento visible (la más larga de todas).
+function transitionTime(layout, slot) {
+  return Math.max(0, ...layout.elements
+    .filter((element) => element.visible && element.animation[slot].preset !== 'none')
+    .map((element) => element.animation[slot].delay + element.animation[slot].duration));
+}
+
 // Dibuja un layout dentro de `container`. Lo usan el widget de OBS y el lienzo del editor.
 // El lienzo tiene el tamaño del layout y se escala por igual para caber en el contenedor, anclado arriba a la izquierda.
-export function createRenderer(container, { idleOpacity = null } = {}) {
+//
+// Ciclo de vida (si algún elemento tiene animación de entrada o de salida): `idle` (en reposo, a la opacidad en reposo),
+// `entering`, `visible` y `exiting`, que se vuelve a `idle`. Con `preview` (el editor) el lienzo siempre está en
+// `visible` y solo cambia de fase con `cycle()`.
+export function createRenderer(container, { idleOpacity = null, preview = false } = {}) {
   const stage = document.createElement('div');
   stage.className = 'stage empty';
   container.append(stage);
@@ -59,9 +71,50 @@ export function createRenderer(container, { idleOpacity = null } = {}) {
   let layout = null;
   let updaters = [];
   let measurers = [];
+  let enterMs = 0;
+  let exitMs = 0;
+  let phase = 'idle';
+  let wasShown = false;
+  const timers = new Set();
 
   // Cuando termina de cargarse una fuente cambia lo que ocupa el texto: los rótulos se miden otra vez.
   document.fonts?.addEventListener('loadingdone', () => measurers.forEach((measure) => measure()));
+
+  function later(ms, action) {
+    const id = setTimeout(() => {
+      timers.delete(id);
+      action();
+    }, ms);
+    timers.add(id);
+  }
+
+  function clearTimers() {
+    for (const id of timers) clearTimeout(id);
+    timers.clear();
+  }
+
+  // Con animaciones el lienzo se ve mientras dura el ciclo (de `entering` a `exiting`) y vuelve a la opacidad en reposo
+  // justo al terminar la salida, no en el siguiente `update`: si no, los elementos reaparecerían un instante.
+  function setPhase(next) {
+    phase = next;
+    stage.dataset.phase = next;
+    if (!preview && stage.classList.contains('animated')) stage.classList.toggle('shown', next !== 'idle');
+  }
+
+  // Volver a `entering` desde `entering` o `visible` tiene que reiniciar las animaciones: se pasa por `idle` y se fuerza el repintado.
+  function enter() {
+    clearTimers();
+    setPhase('idle');
+    void stage.offsetWidth;
+    setPhase('entering');
+    later(enterMs, () => setPhase('visible'));
+  }
+
+  function exit() {
+    clearTimers();
+    setPhase('exiting');
+    later(exitMs, () => setPhase(preview ? 'visible' : 'idle'));
+  }
 
   function fit() {
     // Con el contenedor oculto (por ejemplo, en una pestaña cerrada) no hay tamaño con el que escalar.
@@ -71,11 +124,51 @@ export function createRenderer(container, { idleOpacity = null } = {}) {
     stage.style.transform = `scale(${scale})`;
   }
 
+  function buildElement(element) {
+    const { node: content, update, measure } = BUILDERS[element.type](element);
+    content.classList.add('content', element.type);
+
+    const loop = document.createElement('div');
+    loop.className = 'loop';
+    loop.append(content);
+    const fx = document.createElement('div');
+    fx.className = 'fx';
+    fx.append(loop);
+
+    const node = document.createElement('div');
+    node.className = 'el';
+    node.dataset.id = element.id;
+    const { in: enterAnimation, out: exitAnimation, loop: loopAnimation } = element.animation;
+    Object.assign(node.dataset, { in: enterAnimation.preset, out: exitAnimation.preset, loop: loopAnimation.preset });
+    for (const [name, animation] of [['in', enterAnimation], ['out', exitAnimation]]) {
+      node.style.setProperty(`--${name}-duration`, `${animation.duration}ms`);
+      node.style.setProperty(`--${name}-delay`, `${animation.delay}ms`);
+      node.style.setProperty(`--${name}-easing`, EASINGS[animation.easing]);
+    }
+    node.style.setProperty('--loop-duration', `${loopAnimation.duration}ms`);
+    Object.assign(node.style, {
+      left: `${element.x}px`,
+      top: `${element.y}px`,
+      width: `${element.width}px`,
+      height: `${element.height}px`,
+      opacity: element.opacity,
+      transform: element.rotation ? `rotate(${element.rotation}deg)` : '',
+      display: element.visible ? '' : 'none',
+    });
+    node.append(fx);
+    return { node, update, measure };
+  }
+
   return {
     stage,
 
     get layout() {
       return layout;
+    },
+
+    // Lo que tardan en acabar las animaciones de entrada y de salida del layout actual, en milisegundos.
+    get timing() {
+      return { enter: enterMs, exit: exitMs };
     },
 
     setLayout(next) {
@@ -88,34 +181,57 @@ export function createRenderer(container, { idleOpacity = null } = {}) {
       stage.style.setProperty('--idle-opacity', idleOpacity ?? layout.idleOpacity);
 
       for (const element of layout.elements) {
-        const { node, update, measure } = BUILDERS[element.type](element);
-        node.className = `el ${element.type}`;
-        node.dataset.id = element.id;
-        Object.assign(node.style, {
-          left: `${element.x}px`,
-          top: `${element.y}px`,
-          width: `${element.width}px`,
-          height: `${element.height}px`,
-          opacity: element.opacity,
-          transform: element.rotation ? `rotate(${element.rotation}deg)` : '',
-          display: element.visible ? '' : 'none',
-        });
+        const { node, update, measure } = buildElement(element);
         stage.append(node);
         if (update) updaters.push(update);
         if (measure) measurers.push(measure);
       }
+
+      enterMs = transitionTime(layout, 'in');
+      exitMs = transitionTime(layout, 'out');
+      stage.classList.toggle('animated', enterMs > 0 || exitMs > 0);
+      // Un layout nuevo parte de su estado de reposo (o visible, en el editor); el siguiente `update` lo hace entrar si toca.
+      clearTimers();
+      setPhase(preview ? 'visible' : 'idle');
+      wasShown = false;
       fit();
     },
 
     fit,
 
+    // Reproduce la entrada, espera `holdMs` y reproduce la salida, para ver las animaciones en el editor (`preview`).
+    cycle(holdMs = 1200) {
+      enter();
+      later(enterMs + holdMs, exit);
+    },
+
     // `view` es null cuando no hay nada que mostrar; si no, `{ values, fraction }` (ver `templateValues`).
-    // `shown`: visible del todo; si no, solo con la opacidad en reposo. `paused` detiene el giro del disco.
+    // `shown`: visible del todo; si no, solo con la opacidad en reposo. `paused` detiene las animaciones en bucle.
     update(view, { shown = false, paused = false } = {}) {
       stage.classList.toggle('empty', !view);
-      stage.classList.toggle('shown', shown);
       stage.classList.toggle('paused', paused);
       if (view) for (const update of updaters) update(view);
+
+      if (preview) {
+        stage.classList.add('shown');
+        return;
+      }
+      if (!view) {
+        clearTimers();
+        setPhase('idle');
+        stage.classList.remove('shown');
+        wasShown = false;
+        return;
+      }
+
+      if (stage.classList.contains('animated')) {
+        if (shown && !wasShown) enter();
+        else if (!shown && wasShown) exit();
+        stage.classList.toggle('shown', phase !== 'idle');
+      } else {
+        stage.classList.toggle('shown', shown);
+      }
+      wasShown = shown;
     },
   };
 }

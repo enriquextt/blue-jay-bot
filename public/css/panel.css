@@ -928,3 +928,15 @@ input.number:disabled {
   flex-wrap: wrap;
   gap: 6px 16px;
 }
+
+.we-stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.we-stage-actions .check {
+  margin-right: auto;
+}

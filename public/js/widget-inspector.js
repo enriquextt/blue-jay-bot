@@ -4,16 +4,20 @@ import {
   BORDER_STYLES,
   DEFAULT_FILLS,
   DEFAULT_TEXT_GRADIENT,
+  EASINGS,
+  ENTER_PRESETS,
   FILL_TYPES,
   FONT_WEIGHTS,
   IMAGE_FITS,
   LIMITS,
+  LOOP_PRESETS,
   OVERFLOWS,
   SHAPES,
   SHAPE_TYPES,
   TEXT_VARIABLES,
   VERTICAL_ALIGNMENTS,
 } from './widget/catalog.js';
+import { ANIMATION_TEMPLATE_IDS } from './widget/animation-templates.js';
 import { FONT_KEYS, FONTS, SYSTEM_FONT } from './widget/fonts.js';
 import { t } from './i18n.js';
 
@@ -121,8 +125,8 @@ function colorInput(value, { onInput, onCommit }) {
 // nuevos o una función que lo calcula con el elemento (o layout) tal como está AHORA: el inspector no se reconstruye
 // al terminar de editar un campo, así que lo que tiene guardado puede estar desfasado. `onRebuild(cambio)` es lo mismo
 // para cambios que alteran los campos que se muestran (otra forma, otro tipo de relleno). `onAlign(destino)` pega al lienzo;
-// `onUpload(archivo, tipo)` (`image` o `font`) y `onDeleteAsset(id)` gestionan las imágenes y fuentes subidas.
-export function createInspector({ root, onElement, onLayout, onRebuild, onAlign, onUpload, onDeleteAsset }) {
+// `onAnimationTemplate(id)` aplica una plantilla de animación a todos los elementos. `onUpload(archivo, tipo)` (`image` o `font`) y `onDeleteAsset(id)` gestionan las imágenes y fuentes subidas.
+export function createInspector({ root, onElement, onLayout, onRebuild, onAlign, onUpload, onDeleteAsset, onAnimationTemplate }) {
   function render({ layout, element, assets = [] }) {
     root.replaceChildren();
     if (!layout) return;
@@ -154,8 +158,17 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
         field(t('widgetEditor.showSeconds'), numberInput(layout.showSeconds, LIMITS.showSeconds, set((value) => ({ showSeconds: value })))),
         field(t('widgetEditor.idleOpacity'), numberInput(Math.round(layout.idleOpacity * 100), [0, 100], set((value) => ({ idleOpacity: value / 100 })))),
       ),
+      animationTemplates(),
       node('p', 'empty', t('widgetEditor.selectHint')),
     );
+  }
+
+  function animationTemplates() {
+    const picker = selectInput(ANIMATION_TEMPLATE_IDS[0], ANIMATION_TEMPLATE_IDS.map((id) => [id, t(`widgetEditor.animationTemplate.${id}`)]), { onInput: () => {}, onCommit: () => {} });
+    const apply = node('button', 'secondary', t('widgetEditor.animationTemplateApply'));
+    apply.type = 'button';
+    apply.addEventListener('click', () => onAnimationTemplate(picker.value));
+    return section(t('widgetEditor.animationTemplateTitle'), field(t('widgetEditor.animationTemplatePick'), picker), apply, node('p', 'empty', t('widgetEditor.animationTemplateHint')));
   }
 
   function renderElement(element, assets) {
@@ -190,6 +203,39 @@ export function createInspector({ root, onElement, onLayout, onRebuild, onAlign,
 
     root.append(head, geometry);
     for (const part of TYPE_SECTIONS[element.type]?.({ element, set, nested, rebuild, assets }) ?? []) root.append(part);
+    root.append(animationSection(element, nested));
+  }
+
+  // Entrada, salida y bucle. Cada una elige un preset del catálogo; sus tiempos solo salen si hay preset.
+  function animationSection(element, nested) {
+    const { animation } = element;
+    const slotNested = (slot, key) => nested('animation', (current, value) => ({ ...current, [slot]: { ...current[slot], [key]: value } }));
+    const presetPicker = (slot, presets, labelKey) => field(
+      t(`widgetEditor.animationSlot.${slot}`),
+      selectInput(animation[slot].preset, presets.map((preset) => [preset, t(`widgetEditor.${labelKey}.${preset}`)]), {
+        onInput: (preset) => onRebuild((current) => ({ animation: { ...current.animation, [slot]: { ...current.animation[slot], preset } } })),
+        onCommit: () => {},
+      }),
+    );
+
+    const parts = [];
+    for (const slot of ['in', 'out']) {
+      parts.push(presetPicker(slot, ENTER_PRESETS, 'animationPreset'));
+      if (animation[slot].preset === 'none') continue;
+
+      const grid = node('div', 'we-grid');
+      grid.append(
+        field(t('widgetEditor.animationDuration'), numberInput(animation[slot].duration, LIMITS.animationDuration, { step: 50, ...slotNested(slot, 'duration') })),
+        field(t('widgetEditor.animationDelay'), numberInput(animation[slot].delay, LIMITS.animationDelay, { step: 50, ...slotNested(slot, 'delay') })),
+      );
+      parts.push(grid, field(t('widgetEditor.animationEasing'), selectInput(animation[slot].easing, Object.keys(EASINGS).map((key) => [key, t(`widgetEditor.easing.${key}`)]), slotNested(slot, 'easing'))));
+    }
+
+    parts.push(presetPicker('loop', LOOP_PRESETS, 'animationLoop'));
+    if (animation.loop.preset !== 'none') {
+      parts.push(field(t('widgetEditor.animationLoopDuration'), numberInput(animation.loop.duration, LIMITS.loopDuration, { step: 100, ...slotNested('loop', 'duration') })));
+    }
+    return section(t('widgetEditor.animationSection'), ...parts);
   }
 
   // Forma, relleno, borde y sombra: lo que tienen en común la caja y la imagen.

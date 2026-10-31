@@ -1,4 +1,4 @@
-import { COMMON_DEFAULTS, ELEMENT_TYPES, LIMITS, TYPE_DEFAULTS } from './catalog.js';
+import { animationDefaults, COMMON_DEFAULTS, ELEMENT_TYPES, LIMITS, TYPE_DEFAULTS } from './catalog.js';
 
 // Operaciones del editor sobre un layout: funciones puras que devuelven un layout nuevo (o la información
 // que hace falta para dibujar), sin DOM, para poder probarlas y para que deshacer sea guardar copias.
@@ -47,6 +47,7 @@ export function createElement(layout, type) {
     width,
     height,
     ...COMMON_DEFAULTS,
+    animation: animationDefaults(type),
     ...TYPE_DEFAULTS[type],
   });
 }

@@ -417,14 +417,70 @@
     "textColorSection": "Text color",
     "textGradient": "Use a gradient",
     "outlineSection": "Outline",
-    "outlineWidth": "Outline width"
+    "outlineWidth": "Outline width",
+    "replay": "Replay animation",
+    "testObs": "Test in OBS",
+    "animationSection": "Animation",
+    "animationSlot": {
+      "in": "Enter",
+      "out": "Exit",
+      "loop": "Loop"
+    },
+    "animationPreset": {
+      "none": "None",
+      "fade": "Fade",
+      "slide-left": "Slide in from the left",
+      "slide-right": "Slide in from the right",
+      "slide-top": "Slide in from the top",
+      "slide-bottom": "Slide in from the bottom",
+      "zoom": "Zoom",
+      "pop": "Pop",
+      "flip": "Flip",
+      "reveal": "Reveal",
+      "blur": "Blur",
+      "typewriter": "Typewriter"
+    },
+    "animationLoop": {
+      "none": "None",
+      "spin": "Spin",
+      "pulse": "Pulse",
+      "float": "Float",
+      "shimmer": "Shimmer"
+    },
+    "animationDuration": "Duration (ms)",
+    "animationDelay": "Delay (ms)",
+    "animationEasing": "Curve",
+    "animationLoopDuration": "Cycle length (ms)",
+    "easing": {
+      "ease-out": "Ease out",
+      "ease-in-out": "Ease in and out",
+      "linear": "Linear",
+      "bounce": "Bounce"
+    },
+    "animationTemplateTitle": "Animation template",
+    "animationTemplatePick": "Template",
+    "animationTemplateApply": "Apply to all elements",
+    "animationTemplateHint": "Sets enter and exit on every element, staggered. Loop animations are not changed.",
+    "animationTemplate": {
+      "none": "No animation",
+      "fade": "Fade",
+      "slide-stagger": "Staggered slide",
+      "reveal": "Reveal",
+      "zoom-soft": "Soft zoom",
+      "pop": "Pop"
+    }
   },
   "widget": {
     "requestedBy": "requested by {{user}}",
     "testTitle": "Test song",
     "testArtist": "Blue Jay Bot",
     "templates": {
-      "classic": "Classic"
+      "classic": "Classic",
+      "compact": "Compact",
+      "bar": "Bar only",
+      "big-disc": "Big disc",
+      "corner-banner": "Banner with a corner triangle",
+      "semicircle": "Semicircle"
     }
   },
   "history": {

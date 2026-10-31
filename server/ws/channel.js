@@ -345,8 +345,14 @@ export function createChannel({
       }
 
       case 'widget.test': {
-        // Tarjeta de prueba: solo la ve el widget y no toca la cola ni el historial.
-        return broadcastWidgets({ type: 'widget.test', data: { duration: WIDGET_TEST_SECONDS } });
+        // Tarjeta de prueba: solo la ve el widget y no toca la cola ni el historial. Con `layout` (el borrador del
+        // editor) los widgets lo dibujan mientras dura la prueba, sin guardarlo.
+        let draft;
+        if (command.layout !== undefined) {
+          draft = widgetLayouts.validate(isObject(command.layout) ? command.layout : null);
+          if (!draft) return sendError(socket, 'errors.layoutInvalid');
+        }
+        return broadcastWidgets({ type: 'widget.test', data: { duration: WIDGET_TEST_SECONDS, ...(draft && { layout: draft }) } });
       }
 
       case 'playback.ended': {

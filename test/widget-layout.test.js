@@ -5,8 +5,10 @@ import { createKv } from '../server/db/kv.js';
 import { normalizeLayout } from '../server/widget/layout.js';
 import { WidgetLayouts } from '../server/widget/layouts.js';
 import { fillTemplate, formatTime, templateValues } from '../public/js/widget/format.js';
+import { animationDefaults } from '../public/js/widget/catalog.js';
 import { CLASSIC_ID, TEMPLATES } from '../public/js/widget/templates.js';
 
+const BUILTIN_IDS = TEMPLATES.map(({ id }) => id);
 const box = (extra = {}) => ({ id: 'bg', type: 'box', x: 0, y: 0, width: 100, height: 50, ...extra });
 const layout = (extra = {}) => ({ name: 'Mío', canvas: { width: 400, height: 100 }, elements: [box()], ...extra });
 
@@ -25,6 +27,7 @@ test('el layout Clásico es válido y completa los valores que faltan', () => {
     { ...title },
     {
       id: 'title', type: 'text', x: 98, y: 12, width: 484, height: 52, visible: true, locked: false, rotation: 0, opacity: 1,
+      animation: animationDefaults('text'),
       template: '{title}', color: '#ffffff', fontSize: 20, fontWeight: 700, align: 'left', valign: 'bottom', maxLines: 2,
       fontFamily: 'system', italic: false, uppercase: false, lineHeight: 1.3, letterSpacing: 0, overflow: 'clamp', gradient: null,
       outline: { width: 0, color: '#000000' }, shadow: { enabled: false, x: 0, y: 2, blur: 4, color: '#000000b3' },
@@ -71,7 +74,7 @@ test('los layouts de serie vienen siempre, son de solo lectura y el activo por d
   const { layouts } = setup();
 
   assert.equal(layouts.activeId(), CLASSIC_ID);
-  assert.deepEqual(layouts.list().map(({ id, builtin }) => [id, builtin]), [[CLASSIC_ID, true]]);
+  assert.deepEqual(layouts.list().map(({ id, builtin }) => [id, builtin]), TEMPLATES.map(({ id }) => [id, true]));
   assert.equal(layouts.remove(CLASSIC_ID), false);
   assert.equal(layouts.resolve().id, CLASSIC_ID);
 });
@@ -151,12 +154,12 @@ test('lo guardado se conserva al volver a abrir y se descarta lo dañado', () =>
   ]);
   kv.set('widget.active', 'borrado');
   const damaged = new WidgetLayouts({ kv });
-  assert.deepEqual(damaged.list().map((item) => item.id), [CLASSIC_ID, mine.id]);
+  assert.deepEqual(damaged.list().map((item) => item.id), [...BUILTIN_IDS, mine.id]);
   assert.equal(damaged.get(CLASSIC_ID).name, 'Clásico');
   assert.equal(damaged.activeId(), CLASSIC_ID);
 
   kv.set('widget.layouts', 'no es una lista');
-  assert.deepEqual(new WidgetLayouts({ kv }).list().map((item) => item.id), [CLASSIC_ID]);
+  assert.deepEqual(new WidgetLayouts({ kv }).list().map((item) => item.id), BUILTIN_IDS);
 });
 
 test('fillTemplate sustituye variables conocidas, deja las desconocidas y vacía las sin valor', () => {

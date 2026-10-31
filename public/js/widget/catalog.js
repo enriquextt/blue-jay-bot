@@ -20,6 +20,9 @@ export const LIMITS = {
   lineHeight: [0.8, 3],
   letterSpacing: [-5, 50],
   outlineWidth: [0, 20],
+  animationDuration: [50, 5000],
+  animationDelay: [0, 5000],
+  loopDuration: [500, 20000],
   templateLength: 200,
 };
 
@@ -105,3 +108,23 @@ export const DEFAULT_FILLS = {
   radial: { type: 'radial', stops: [{ offset: 0, color: '#4f8cff' }, { offset: 1, color: '#12151c' }] },
   image: { type: 'image', asset: null, fit: 'cover' },
 };
+
+// Animaciones de un elemento: de entrada (`in`), de salida (`out`, la misma animación al revés) y en bucle (`loop`).
+// Los nombres coinciden con los `@keyframes` de `widget-render.css`; en el layout solo se guarda el nombre, nunca CSS.
+export const ENTER_PRESETS = ['none', 'fade', 'slide-left', 'slide-right', 'slide-top', 'slide-bottom', 'zoom', 'pop', 'flip', 'reveal', 'blur', 'typewriter'];
+export const LOOP_PRESETS = ['none', 'spin', 'pulse', 'float', 'shimmer'];
+export const EASINGS = {
+  'ease-out': 'cubic-bezier(0.22, 1, 0.36, 1)',
+  'ease-in-out': 'ease-in-out',
+  linear: 'linear',
+  bounce: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+};
+
+// Lo que falta de la animación de un elemento. El disco gira por defecto, como el de las versiones anteriores.
+export function animationDefaults(type) {
+  return {
+    in: { preset: 'none', duration: 500, delay: 0, easing: 'ease-out' },
+    out: { preset: 'none', duration: 500, delay: 0, easing: 'ease-out' },
+    loop: { preset: type === 'disc' ? 'spin' : 'none', duration: 3000 },
+  };
+}

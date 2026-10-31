@@ -223,7 +223,8 @@ test('el widget recibe el layout activo al conectar y cada cambio, y uno propio 
 
     const lists = await panel.waitFor((m) => m.type === 'widget.layouts');
     assert.equal(lists.data.active, 'classic');
-    assert.deepEqual(lists.data.layouts.map((layout) => layout.id), ['classic']);
+    assert.equal(lists.data.layouts.every((layout) => layout.builtin), true);
+    assert.equal(lists.data.layouts[0].id, 'classic');
 
     send(panel, { type: 'widget.layout.save', layout: LAYOUT });
     const { id } = await panel.waitFor((m) => m.type === 'widget.layout.saved');
@@ -275,14 +276,14 @@ test('las órdenes de layout validan, solo las acepta el panel y los de serie no
     send(panel, { type: 'widget.layout.duplicate', id: 'classic', name: 'Copia' });
     const { id } = await panel.waitFor((m) => m.type === 'widget.layout.saved');
     const lists = panel.messages.findLast((m) => m.type === 'widget.layouts');
-    assert.deepEqual(lists.data.layouts.map((layout) => layout.name), ['Clásico', 'Copia']);
+    assert.deepEqual(lists.data.layouts.filter((layout) => !layout.builtin).map((layout) => layout.name), ['Copia']);
     assert.equal(lists.data.layouts.find((layout) => layout.id === id).builtin, false);
 
     // Un widget solo lee: sus órdenes se ignoran.
     const widget = await connect(`${url}?view=widget`);
     send(widget, { type: 'widget.layout.delete', id });
     await pause();
-    assert.equal(panel.messages.findLast((m) => m.type === 'widget.layouts').data.layouts.length, 2);
+    assert.equal(panel.messages.findLast((m) => m.type === 'widget.layouts').data.layouts.filter((layout) => !layout.builtin).length, 1);
 
     panel.socket.close();
     widget.socket.close();

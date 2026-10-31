@@ -11,6 +11,11 @@
   transition: opacity 0.4s;
 }
 
+/* Con animaciones de entrada o salida las llevan los propios elementos: el lienzo aparece y desaparece de golpe. */
+.stage.animated {
+  transition: none;
+}
+
 .stage.shown {
   opacity: 1;
 }
@@ -20,12 +25,22 @@
   opacity: 0;
 }
 
+/* Cada elemento son tres capas: `.el` lo coloca y gira, `.fx` lleva la animación de entrada y salida y `.loop` la
+   animación en bucle, para que no se pisen las transformaciones. */
 .el {
   position: absolute;
   box-sizing: border-box;
 }
 
-.el.text {
+.fx,
+.loop,
+.content {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.content.text {
   display: flex;
   flex-direction: column;
 }
@@ -63,7 +78,7 @@
   }
 }
 
-.el.progress {
+.content.progress {
   overflow: hidden;
 }
 
@@ -72,19 +87,302 @@
   height: 100%;
 }
 
-.el.disc svg {
+.content.disc svg {
   display: block;
   width: 100%;
   height: 100%;
-  animation: spin 3s linear infinite;
 }
 
-.stage.paused .el.disc svg {
-  animation-play-state: paused;
+/* Un texto que cambia de canción se funde en vez de saltar (lo pone `text.js`). */
+.swap {
+  animation: bj-fade 0.35s ease-out;
 }
 
-@keyframes spin {
+/* Animaciones de entrada y salida: la salida es la misma animación al revés (`reverse`). Los nombres de los
+   presets son los del catálogo (`catalog.js`); `render.js` pone la fase del lienzo en `data-phase`. */
+.stage[data-phase="entering"] .el > .fx {
+  animation-duration: var(--in-duration);
+  animation-delay: var(--in-delay);
+  animation-timing-function: var(--in-easing);
+  animation-fill-mode: both;
+}
+
+.stage[data-phase="exiting"] .el > .fx {
+  animation-duration: var(--out-duration);
+  animation-delay: var(--out-delay);
+  animation-timing-function: var(--out-easing);
+  animation-fill-mode: both;
+  animation-direction: reverse;
+}
+
+.stage[data-phase="entering"] .el[data-in="fade"] > .fx {
+  animation-name: bj-fade;
+}
+
+.stage[data-phase="exiting"] .el[data-out="fade"] > .fx {
+  animation-name: bj-fade;
+}
+
+.stage[data-phase="entering"] .el[data-in="slide-left"] > .fx {
+  animation-name: bj-slide-left;
+}
+
+.stage[data-phase="exiting"] .el[data-out="slide-left"] > .fx {
+  animation-name: bj-slide-left;
+}
+
+.stage[data-phase="entering"] .el[data-in="slide-right"] > .fx {
+  animation-name: bj-slide-right;
+}
+
+.stage[data-phase="exiting"] .el[data-out="slide-right"] > .fx {
+  animation-name: bj-slide-right;
+}
+
+.stage[data-phase="entering"] .el[data-in="slide-top"] > .fx {
+  animation-name: bj-slide-top;
+}
+
+.stage[data-phase="exiting"] .el[data-out="slide-top"] > .fx {
+  animation-name: bj-slide-top;
+}
+
+.stage[data-phase="entering"] .el[data-in="slide-bottom"] > .fx {
+  animation-name: bj-slide-bottom;
+}
+
+.stage[data-phase="exiting"] .el[data-out="slide-bottom"] > .fx {
+  animation-name: bj-slide-bottom;
+}
+
+.stage[data-phase="entering"] .el[data-in="zoom"] > .fx {
+  animation-name: bj-zoom;
+}
+
+.stage[data-phase="exiting"] .el[data-out="zoom"] > .fx {
+  animation-name: bj-zoom;
+}
+
+.stage[data-phase="entering"] .el[data-in="pop"] > .fx {
+  animation-name: bj-pop;
+}
+
+.stage[data-phase="exiting"] .el[data-out="pop"] > .fx {
+  animation-name: bj-pop;
+}
+
+.stage[data-phase="entering"] .el[data-in="flip"] > .fx {
+  animation-name: bj-flip;
+}
+
+.stage[data-phase="exiting"] .el[data-out="flip"] > .fx {
+  animation-name: bj-flip;
+}
+
+.stage[data-phase="entering"] .el[data-in="reveal"] > .fx {
+  animation-name: bj-reveal;
+}
+
+.stage[data-phase="exiting"] .el[data-out="reveal"] > .fx {
+  animation-name: bj-reveal;
+}
+
+.stage[data-phase="entering"] .el[data-in="blur"] > .fx {
+  animation-name: bj-blur;
+}
+
+.stage[data-phase="exiting"] .el[data-out="blur"] > .fx {
+  animation-name: bj-blur;
+}
+
+.stage[data-phase="entering"] .el[data-in="typewriter"] > .fx {
+  animation-name: bj-reveal;
+  animation-timing-function: steps(24, end);
+}
+
+.stage[data-phase="exiting"] .el[data-out="typewriter"] > .fx {
+  animation-name: bj-reveal;
+  animation-timing-function: steps(24, end);
+}
+
+@keyframes bj-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bj-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bj-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bj-slide-top {
+  from {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bj-slide-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bj-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bj-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bj-flip {
+  from {
+    opacity: 0;
+    transform: perspective(600px) rotateX(90deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: perspective(600px) rotateX(0);
+  }
+}
+
+@keyframes bj-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes bj-blur {
+  from {
+    opacity: 0;
+    filter: blur(14px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* Animaciones en bucle. */
+
+.el[data-loop="spin"] > .fx > .loop {
+  animation: bj-loop-spin var(--loop-duration) linear infinite;
+}
+
+@keyframes bj-loop-spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+.el[data-loop="pulse"] > .fx > .loop {
+  animation: bj-loop-pulse var(--loop-duration) ease-in-out infinite;
+}
+
+@keyframes bj-loop-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.el[data-loop="float"] > .fx > .loop {
+  animation: bj-loop-float var(--loop-duration) ease-in-out infinite;
+}
+
+@keyframes bj-loop-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.el[data-loop="shimmer"] > .fx > .loop {
+  animation: bj-loop-shimmer var(--loop-duration) ease-in-out infinite;
+}
+
+@keyframes bj-loop-shimmer {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.45);
+  }
+}
+
+.stage.paused .loop {
+  animation-play-state: paused;
 }

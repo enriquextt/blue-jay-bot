@@ -8,6 +8,8 @@ const TEST_SECONDS = 8;
 const DEFAULT_SHOW_SECONDS = 10;
 
 let renderer = null;
+// El layout del servidor y el que se dibuja ahora (el de una prueba con borrador es otro mientras dura).
+let baseLayout = null;
 let layoutJson = null;
 let current = null;
 // Último progreso recibido y cuándo llegó: entre mensajes la barra avanza sola.
@@ -18,6 +20,13 @@ let test = null;
 let shownUntil = 0;
 // El primer estado tras conectar no cuenta como cambio de pista: al cargar el widget no debe aparecer.
 let stateReceived = false;
+
+// Solo se redibuja si cambió: cada guardado se envía a todos los widgets.
+function applyLayout(layout) {
+  const json = JSON.stringify(layout);
+  if (json !== layoutJson) renderer.setLayout(layout);
+  layoutJson = json;
+}
 
 const showMs = (seconds) => (renderer?.layout?.showSeconds ?? seconds ?? DEFAULT_SHOW_SECONDS) * 1000;
 
@@ -41,11 +50,17 @@ function view() {
 
 function render() {
   if (!renderer?.layout) return;
-  if (test && Date.now() - test.startedAt > TEST_SECONDS * 1000) test = null;
+  // La tarjeta de prueba se ve TEST_SECONDS y se quita cuando ha terminado también la animación de salida.
+  const testEnd = test && test.startedAt + TEST_SECONDS * 1000;
+  if (test && Date.now() > testEnd + renderer.timing.exit + TICK_MS) {
+    const draft = test.layout;
+    test = null;
+    if (draft && baseLayout) applyLayout(baseLayout);
+  }
 
   const data = view();
   renderer.update(data && { values: templateValues(data), fraction: data.duration > 0 ? Math.min(1, data.position / data.duration) : 0 }, {
-    shown: Boolean(test) || Date.now() < shownUntil,
+    shown: Boolean(test && Date.now() < testEnd) || Date.now() < shownUntil,
     paused: progress?.id === current?.id && Boolean(progress?.paused),
   });
 }
@@ -53,9 +68,8 @@ function render() {
 function handleMessage(message) {
   switch (message.type) {
     case 'widget.layout':
-      // Cada guardado se envía a todos los widgets: solo se redibuja si cambió el suyo.
-      if (JSON.stringify(message.data) !== layoutJson) renderer.setLayout(message.data);
-      layoutJson = JSON.stringify(message.data);
+      baseLayout = message.data;
+      if (!test?.layout) applyLayout(baseLayout);
       break;
     case 'state':
       if (message.data.current?.id !== current?.id) {
@@ -71,7 +85,9 @@ function handleMessage(message) {
       receivedAt = Date.now();
       break;
     case 'widget.test':
-      test = { startedAt: Date.now() };
+      // Con un borrador del editor (`layout`) la prueba lo dibuja, sin guardarlo, mientras dura.
+      test = { startedAt: Date.now(), layout: message.data?.layout ?? null };
+      if (test.layout) applyLayout(test.layout);
       break;
     case 'widget.show':
       shownUntil = Date.now() + showMs(message.data?.seconds);

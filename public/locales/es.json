@@ -417,14 +417,70 @@
     "textColorSection": "Color del texto",
     "textGradient": "Usar degradado",
     "outlineSection": "Contorno",
-    "outlineWidth": "Grosor del contorno"
+    "outlineWidth": "Grosor del contorno",
+    "replay": "Repetir animación",
+    "testObs": "Probar en OBS",
+    "animationSection": "Animación",
+    "animationSlot": {
+      "in": "Entrada",
+      "out": "Salida",
+      "loop": "En bucle"
+    },
+    "animationPreset": {
+      "none": "Ninguna",
+      "fade": "Fundido",
+      "slide-left": "Deslizar desde la izquierda",
+      "slide-right": "Deslizar desde la derecha",
+      "slide-top": "Deslizar desde arriba",
+      "slide-bottom": "Deslizar desde abajo",
+      "zoom": "Zoom",
+      "pop": "Rebote",
+      "flip": "Giro",
+      "reveal": "Revelado",
+      "blur": "Desenfoque",
+      "typewriter": "Máquina de escribir"
+    },
+    "animationLoop": {
+      "none": "Ninguna",
+      "spin": "Girar",
+      "pulse": "Pulso",
+      "float": "Flotar",
+      "shimmer": "Brillo"
+    },
+    "animationDuration": "Duración (ms)",
+    "animationDelay": "Retraso (ms)",
+    "animationEasing": "Curva",
+    "animationLoopDuration": "Duración del ciclo (ms)",
+    "easing": {
+      "ease-out": "Suave al final",
+      "ease-in-out": "Suave al principio y al final",
+      "linear": "Constante",
+      "bounce": "Con rebote"
+    },
+    "animationTemplateTitle": "Plantilla de animación",
+    "animationTemplatePick": "Plantilla",
+    "animationTemplateApply": "Aplicar a todos los elementos",
+    "animationTemplateHint": "Pone entrada y salida a todos los elementos, escalonadas. Las animaciones en bucle no cambian.",
+    "animationTemplate": {
+      "none": "Sin animación",
+      "fade": "Fundido",
+      "slide-stagger": "Deslizar escalonado",
+      "reveal": "Revelado",
+      "zoom-soft": "Zoom suave",
+      "pop": "Rebote"
+    }
   },
   "widget": {
     "requestedBy": "pedida por {{user}}",
     "testTitle": "Canción de prueba",
     "testArtist": "Blue Jay Bot",
     "templates": {
-      "classic": "Clásico"
+      "classic": "Clásico",
+      "compact": "Compacto",
+      "bar": "Solo barra",
+      "big-disc": "Disco grande",
+      "corner-banner": "Banner con triángulo en la esquina",
+      "semicircle": "Semicírculo"
     }
   },
   "history": {

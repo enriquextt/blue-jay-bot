@@ -2,12 +2,16 @@ import {
   ALIGNMENTS,
   ASSET_ID,
   BORDER_STYLES,
+  animationDefaults,
   COMMON_DEFAULTS,
+  EASINGS,
+  ENTER_PRESETS,
   ELEMENT_TYPES,
   FILL_TYPES,
   FONT_WEIGHTS,
   IMAGE_FITS,
   LIMITS,
+  LOOP_PRESETS,
   OVERFLOWS,
   SHAPES,
   SURFACE_TYPES,
@@ -132,6 +136,30 @@ function normalizeText(input, element, options) {
   return fontFamily && gradient !== undefined && outline && shadow ? { ...element, fontFamily, gradient, outline, shadow } : null;
 }
 
+// Cada ranura (`in`, `out`, `loop`) se completa con sus valores por defecto y se reconstruye con lo que le corresponde.
+function normalizeAnimation(input, type) {
+  const defaults = animationDefaults(type);
+  if (input !== undefined && !isObject(input)) return null;
+
+  const slot = (name, presets, fields) => {
+    const value = { ...defaults[name], ...(isObject(input?.[name]) ? input[name] : null) };
+    if (input?.[name] !== undefined && !isObject(input[name])) return null;
+    if (!presets.includes(value.preset) || !fields.every(([key, valid]) => valid(value[key]))) return null;
+    return Object.fromEntries([['preset', value.preset], ...fields.map(([key]) => [key, value[key]])]);
+  };
+  const transition = [
+    ['duration', (value) => inRange(value, LIMITS.animationDuration)],
+    ['delay', (value) => inRange(value, LIMITS.animationDelay)],
+    ['easing', (value) => Object.hasOwn(EASINGS, value)],
+  ];
+  const animation = {
+    in: slot('in', ENTER_PRESETS, transition),
+    out: slot('out', ENTER_PRESETS, transition),
+    loop: slot('loop', LOOP_PRESETS, [['duration', (value) => inRange(value, LIMITS.loopDuration)]]),
+  };
+  return animation.in && animation.out && animation.loop ? animation : null;
+}
+
 function normalizeSurface(input, element, options) {
   const defaults = TYPE_DEFAULTS[element.type];
   const shape = normalizeShape(input.shape ?? defaults.shape);
@@ -192,6 +220,10 @@ function normalizeElement(input, options) {
     if (value === undefined) return null;
     element[key] = value;
   }
+
+  const animation = normalizeAnimation(input.animation, element.type);
+  if (!animation) return null;
+  element.animation = animation;
 
   if (SURFACE_TYPES.includes(element.type)) return normalizeSurface(input, element, options);
   return element.type === 'text' ? normalizeText(input, element, options) : element;

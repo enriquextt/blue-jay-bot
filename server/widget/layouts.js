@@ -48,10 +48,15 @@ export class WidgetLayouts extends EventEmitter {
     return this.get(id) ?? this.get(this.#active);
   }
 
+  // El layout limpio (ver `normalizeLayout`) o null si no es válido; comprueba que las imágenes y fuentes existen.
+  validate(input) {
+    return normalizeLayout(input, { hasAsset: this.#assets ? (assetId, kind) => this.#assets.has(assetId, kind) : null });
+  }
+
   // Crea un layout o, si `id` es el de uno propio, lo reemplaza. Un id desconocido o de serie crea uno nuevo (guardar como).
   // Devuelve el layout guardado, o null si no es válido o ya hay demasiados.
   save({ id = null, ...input }) {
-    const layout = normalizeLayout(input, { hasAsset: this.#assets ? (assetId, kind) => this.#assets.has(assetId, kind) : null });
+    const layout = this.validate(input);
     if (!layout) return null;
 
     const index = this.#custom.findIndex((item) => item.id === id);
