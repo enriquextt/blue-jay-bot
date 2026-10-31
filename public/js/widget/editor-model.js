@@ -4,7 +4,7 @@ import { COMMON_DEFAULTS, ELEMENT_TYPES, LIMITS, TYPE_DEFAULTS } from './catalog
 // que hace falta para dibujar), sin DOM, para poder probarlas y para que deshacer sea guardar copias.
 
 const MIN_SIZE = 4;
-const DEFAULT_SIZES = { text: [240, 30], progress: [300, 8], disc: [64, 64], box: [120, 60] };
+const DEFAULT_SIZES = { text: [240, 30], progress: [300, 8], disc: [64, 64], box: [120, 60], image: [160, 160] };
 const DUPLICATE_OFFSET = 12;
 const HISTORY_LIMIT = 100;
 

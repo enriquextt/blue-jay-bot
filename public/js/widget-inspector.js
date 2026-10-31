@@ -1,5 +1,17 @@
 import { ALIGN_TARGETS } from './widget/editor-model.js';
-import { ALIGNMENTS, FONT_WEIGHTS, LIMITS, TEXT_VARIABLES, VERTICAL_ALIGNMENTS } from './widget/catalog.js';
+import {
+  ALIGNMENTS,
+  BORDER_STYLES,
+  DEFAULT_FILLS,
+  FILL_TYPES,
+  FONT_WEIGHTS,
+  IMAGE_FITS,
+  LIMITS,
+  SHAPES,
+  SHAPE_TYPES,
+  TEXT_VARIABLES,
+  VERTICAL_ALIGNMENTS,
+} from './widget/catalog.js';
 import { t } from './i18n.js';
 
 const COLOR = /^#([0-9a-f]{6})([0-9a-f]{2})?$/i;
@@ -102,13 +114,17 @@ function colorInput(value, { onInput, onCommit }) {
 }
 
 // Inspector: edita las propiedades del elemento seleccionado o, sin selección, las del layout.
-// `onElement(patch, { commit })` y `onLayout(patch, { commit })` piden el cambio; `onAlign(destino)` pega al lienzo.
-export function createInspector({ root, onElement, onLayout, onAlign }) {
-  function render({ layout, element }) {
+// `onElement(cambio, { commit })` y `onLayout(cambio, { commit })` piden el cambio; `cambio` es un objeto con los campos
+// nuevos o una función que lo calcula con el elemento (o layout) tal como está AHORA: el inspector no se reconstruye
+// al terminar de editar un campo, así que lo que tiene guardado puede estar desfasado. `onRebuild(cambio)` es lo mismo
+// para cambios que alteran los campos que se muestran (otra forma, otro tipo de relleno). `onAlign(destino)` pega al lienzo;
+// `onUpload(archivo)` y `onDeleteAsset(id)` gestionan las imágenes subidas.
+export function createInspector({ root, onElement, onLayout, onRebuild, onAlign, onUpload, onDeleteAsset }) {
+  function render({ layout, element, assets = [] }) {
     root.replaceChildren();
     if (!layout) return;
 
-    if (element) renderElement(layout, element);
+    if (element) renderElement(element, assets);
     else renderLayout(layout);
   }
 
@@ -116,34 +132,41 @@ export function createInspector({ root, onElement, onLayout, onAlign }) {
     return { onInput: (value) => apply(value, { commit: false }), onCommit: () => apply(undefined, { commit: true }) };
   }
 
-  function renderLayout(layout) {
-    const set = (patch, options) => onLayout(patch, options);
-    const section = node('div', 'we-section');
-    section.append(node('h3', '', t('widgetEditor.layoutTitle')));
-
-    section.append(
-      field(t('widgetEditor.name'), textInput(layout.name, { maxLength: LIMITS.nameLength, ...bind((value, o) => set(value === undefined ? {} : { name: value }, o)) })),
-      field(t('widgetEditor.canvasWidth'), numberInput(layout.canvas.width, LIMITS.canvasWidth, bind((value, o) => set(value === undefined ? {} : { canvas: { ...layout.canvas, width: value } }, o)))),
-      field(t('widgetEditor.canvasHeight'), numberInput(layout.canvas.height, LIMITS.canvasHeight, bind((value, o) => set(value === undefined ? {} : { canvas: { ...layout.canvas, height: value } }, o)))),
-      field(t('widgetEditor.showSeconds'), numberInput(layout.showSeconds, LIMITS.showSeconds, bind((value, o) => set(value === undefined ? {} : { showSeconds: value }, o)))),
-      field(t('widgetEditor.idleOpacity'), numberInput(Math.round(layout.idleOpacity * 100), [0, 100], bind((value, o) => set(value === undefined ? {} : { idleOpacity: value / 100 }, o)))),
-    );
-    root.append(section);
-    root.append(node('p', 'empty', t('widgetEditor.selectHint')));
+  function section(title, ...children) {
+    const wrapper = node('div', 'we-section');
+    if (title) wrapper.append(node('h3', '', title));
+    wrapper.append(...children);
+    return wrapper;
   }
 
-  function renderElement(layout, element) {
-    const set = (key, transform = (value) => value) => bind((value, options) => onElement(value === undefined ? {} : { [key]: transform(value) }, options));
+  function renderLayout(layout) {
+    const set = (build) => bind((value, options) => onLayout(value === undefined ? {} : build(value), options));
 
-    const head = node('div', 'we-section');
-    head.append(node('h3', '', `${t(`widgetEditor.type.${element.type}`)} · ${element.id}`));
-    head.append(
+    root.append(
+      section(
+        t('widgetEditor.layoutTitle'),
+        field(t('widgetEditor.name'), textInput(layout.name, { maxLength: LIMITS.nameLength, ...set((value) => ({ name: value })) })),
+        field(t('widgetEditor.canvasWidth'), numberInput(layout.canvas.width, LIMITS.canvasWidth, set((value) => (current) => ({ canvas: { ...current.canvas, width: value } })))),
+        field(t('widgetEditor.canvasHeight'), numberInput(layout.canvas.height, LIMITS.canvasHeight, set((value) => (current) => ({ canvas: { ...current.canvas, height: value } })))),
+        field(t('widgetEditor.showSeconds'), numberInput(layout.showSeconds, LIMITS.showSeconds, set((value) => ({ showSeconds: value })))),
+        field(t('widgetEditor.idleOpacity'), numberInput(Math.round(layout.idleOpacity * 100), [0, 100], set((value) => ({ idleOpacity: value / 100 })))),
+      ),
+      node('p', 'empty', t('widgetEditor.selectHint')),
+    );
+  }
+
+  function renderElement(element, assets) {
+    const set = (key, transform = (value) => value) => bind((value, options) => onElement(value === undefined ? {} : { [key]: transform(value) }, options));
+    // Para un campo dentro de un objeto (`border.width`): se parte del objeto actual, no del que se pintó.
+    const nested = (key, build) => bind((value, options) => onElement(value === undefined ? {} : (current) => ({ [key]: build(current[key], value) }), options));
+    const rebuild = (key, build) => (value) => onRebuild((current) => ({ [key]: build(current[key], value) }));
+
+    const head = section(
+      `${t(`widgetEditor.type.${element.type}`)} · ${element.id}`,
       checkbox(element.visible, t('widgetEditor.visible'), set('visible')),
       checkbox(element.locked, t('widgetEditor.locked'), set('locked')),
     );
 
-    const geometry = node('div', 'we-section');
-    geometry.append(node('h3', '', t('widgetEditor.geometry')));
     const grid = node('div', 'we-grid');
     grid.append(
       field('X', numberInput(element.x, LIMITS.position, set('x'))),
@@ -153,8 +176,6 @@ export function createInspector({ root, onElement, onLayout, onAlign }) {
       field(t('widgetEditor.rotation'), numberInput(element.rotation, [-360, 360], set('rotation'))),
       field(t('widgetEditor.opacity'), numberInput(Math.round(element.opacity * 100), [0, 100], set('opacity', (value) => value / 100))),
     );
-    geometry.append(grid);
-
     const align = node('div', 'we-align');
     for (const target of ALIGN_TARGETS) {
       const button = node('button', 'secondary', t(`widgetEditor.align.${target}`));
@@ -162,18 +183,157 @@ export function createInspector({ root, onElement, onLayout, onAlign }) {
       button.addEventListener('click', () => onAlign(target));
       align.append(button);
     }
-    geometry.append(node('span', 'we-label', t('widgetEditor.alignTitle')), align);
+    const geometry = section(t('widgetEditor.geometry'), grid, node('span', 'we-label', t('widgetEditor.alignTitle')), align);
 
     root.append(head, geometry);
-    const specific = TYPE_SECTIONS[element.type]?.({ element, set });
-    if (specific) root.append(specific);
+    for (const part of TYPE_SECTIONS[element.type]?.({ element, set, nested, rebuild, assets }) ?? []) root.append(part);
+  }
+
+  // Forma, relleno, borde y sombra: lo que tienen en común la caja y la imagen.
+  function surfaceSections({ element, nested, rebuild, assets }) {
+    const { shape, fill, border, shadow } = element;
+    const { variants } = SHAPES[shape.type];
+
+    // `selectInput` llama a `onInput` y luego a `onCommit`: aquí todo lo hace `onRebuild`, que ya anota el cambio.
+    const shapeFields = [
+      field(t('widgetEditor.shapeTitle'), selectInput(shape.type, SHAPE_TYPES.map((type) => [type, t(`widgetEditor.shape.${type}`)]), {
+        onInput: (type) => onRebuild((current) => ({ shape: { ...current.shape, type, variant: SHAPES[type].variants[0] ?? null } })),
+        onCommit: () => {},
+      })),
+    ];
+    if (variants.length > 0) {
+      shapeFields.push(field(t('widgetEditor.variantTitle'), selectInput(shape.variant ?? variants[0], variants.map((variant) => [variant, t(`widgetEditor.variant.${shape.type}.${variant}`)]), {
+        onInput: rebuild('shape', (current, variant) => ({ ...current, variant })),
+        onCommit: () => {},
+      })));
+    }
+    if (shape.type === 'rect') {
+      shapeFields.push(field(t('widgetEditor.radius'), numberInput(shape.radius, LIMITS.radius, nested('shape', (current, radius) => ({ ...current, radius })))));
+    }
+
+    const fillFields = [
+      field(t('widgetEditor.fillType'), selectInput(fill.type, FILL_TYPES.map((type) => [type, t(`widgetEditor.fillKind.${type}`)]), {
+        onInput: (type) => onRebuild((current) => ({ fill: fillFor(type, current.fill) })),
+        onCommit: () => {},
+      })),
+    ];
+    if (fill.type === 'solid') {
+      fillFields.push(field(t('widgetEditor.color'), colorInput(fill.color, nested('fill', (current, color) => ({ ...current, color })))));
+    } else if (fill.type === 'linear' || fill.type === 'radial') {
+      if (fill.type === 'linear') {
+        fillFields.push(field(t('widgetEditor.angle'), numberInput(fill.angle, [0, 360], nested('fill', (current, angle) => ({ ...current, angle })))));
+      }
+      fillFields.push(...stopsEditor(fill, nested));
+    } else if (fill.type === 'image') {
+      fillFields.push(...imageFields(fill, nested, assets));
+    }
+
+    const borderFields = [
+      field(t('widgetEditor.borderWidth'), numberInput(border.width, LIMITS.borderWidth, nested('border', (current, width) => ({ ...current, width })))),
+    ];
+    if (border.width > 0) {
+      borderFields.push(
+        field(t('widgetEditor.color'), colorInput(border.color, nested('border', (current, color) => ({ ...current, color })))),
+        field(t('widgetEditor.borderStyle'), selectInput(border.style, BORDER_STYLES.map((style) => [style, t(`widgetEditor.borderKind.${style}`)]), nested('border', (current, style) => ({ ...current, style })))),
+      );
+    }
+
+    const shadowFields = [checkbox(shadow.enabled, t('widgetEditor.shadowEnabled'), {
+      onInput: () => {},
+      onCommit: () => onRebuild((current) => ({ shadow: { ...current.shadow, enabled: !current.shadow.enabled } })),
+    })];
+    if (shadow.enabled) {
+      const grid = node('div', 'we-grid');
+      grid.append(
+        field('X', numberInput(shadow.x, LIMITS.shadowOffset, nested('shadow', (current, x) => ({ ...current, x })))),
+        field('Y', numberInput(shadow.y, LIMITS.shadowOffset, nested('shadow', (current, y) => ({ ...current, y })))),
+        field(t('widgetEditor.shadowBlur'), numberInput(shadow.blur, LIMITS.shadowBlur, nested('shadow', (current, blur) => ({ ...current, blur })))),
+      );
+      shadowFields.push(grid, field(t('widgetEditor.color'), colorInput(shadow.color, nested('shadow', (current, color) => ({ ...current, color })))));
+    }
+
+    return [
+      section(t('widgetEditor.shapeSection'), ...shapeFields),
+      section(t('widgetEditor.fillSection'), ...fillFields),
+      section(t('widgetEditor.borderSection'), ...borderFields),
+      section(t('widgetEditor.shadowSection'), ...shadowFields),
+    ];
+  }
+
+  // Al cambiar de tipo de relleno se parte del valor por defecto de ese tipo, salvo la imagen y el ajuste, que se conservan.
+  function fillFor(type, current) {
+    const next = structuredClone(DEFAULT_FILLS[type]);
+    if (type === 'image' && current.type === 'image') return current;
+    if (type === 'solid' && current.stops) next.color = current.stops[0].color;
+    if ((type === 'linear' || type === 'radial') && current.type === 'solid') next.stops[0].color = current.color;
+    return next;
+  }
+
+  function stopsEditor(fill, nested) {
+    const rows = fill.stops.map((stop, index) => {
+      const row = node('div', 'we-stop');
+      const update = (build) => nested('fill', (current, value) => ({ ...current, stops: current.stops.map((item, i) => (i === index ? build(item, value) : item)) }));
+      const color = colorInput(stop.color, update((item, value) => ({ ...item, color: value })));
+      const offset = numberInput(Math.round(stop.offset * 100), [0, 100], update((item, value) => ({ ...item, offset: value / 100 })));
+      offset.title = t('widgetEditor.stopOffset');
+      offset.setAttribute('aria-label', t('widgetEditor.stopOffset'));
+
+      const remove = node('button', 'secondary', '×');
+      remove.type = 'button';
+      remove.title = t('widgetEditor.removeStop');
+      remove.setAttribute('aria-label', t('widgetEditor.removeStop'));
+      remove.disabled = fill.stops.length <= LIMITS.gradientStops[0];
+      remove.addEventListener('click', () => onRebuild((current) => ({ fill: { ...current.fill, stops: current.fill.stops.filter((_, i) => i !== index) } })));
+
+      row.append(color, offset, remove);
+      return row;
+    });
+
+    const add = node('button', 'secondary', t('widgetEditor.addStop'));
+    add.type = 'button';
+    add.disabled = fill.stops.length >= LIMITS.gradientStops[1];
+    add.addEventListener('click', () => onRebuild((current) => {
+      const { stops } = current.fill;
+      const last = stops.at(-1);
+      // El color nuevo va al final, a medio camino entre el último y el borde.
+      return { fill: { ...current.fill, stops: [...stops, { offset: Math.min(1, (last.offset + 1) / 2 || 1), color: last.color }] } };
+    }));
+
+    return [node('span', 'we-label', t('widgetEditor.stops')), ...rows, add];
+  }
+
+  function imageFields(fill, nested, assets) {
+    const picker = selectInput(fill.asset ?? '', [['', t('widgetEditor.imageNone')], ...assets.map((asset) => [asset.id, asset.name])], {
+      onInput: (id) => onRebuild((current) => ({ fill: { ...current.fill, asset: id || null } })),
+      onCommit: () => {},
+    });
+
+    const input = node('input');
+    Object.assign(input, { type: 'file', accept: 'image/png,image/jpeg,image/webp,image/gif', hidden: true });
+    input.addEventListener('change', () => {
+      if (input.files[0]) onUpload(input.files[0]);
+      input.value = '';
+    });
+    const upload = node('button', 'secondary', t('widgetEditor.upload'));
+    upload.type = 'button';
+    upload.addEventListener('click', () => input.click());
+
+    const remove = node('button', 'secondary', t('widgetEditor.deleteImage'));
+    remove.type = 'button';
+    remove.disabled = !fill.asset;
+    remove.addEventListener('click', () => onDeleteAsset(fill.asset));
+
+    const buttons = node('div', 'we-align');
+    buttons.append(upload, remove, input);
+    return [
+      field(t('widgetEditor.image'), picker),
+      buttons,
+      field(t('widgetEditor.fit'), selectInput(fill.fit, IMAGE_FITS.map((fit) => [fit, t(`widgetEditor.fitKind.${fit}`)]), nested('fill', (current, fit) => ({ ...current, fit })))),
+    ];
   }
 
   const TYPE_SECTIONS = {
     text({ element, set }) {
-      const section = node('div', 'we-section');
-      section.append(node('h3', '', t('widgetEditor.textTitle')));
-
       const template = textInput(element.template, { maxLength: LIMITS.templateLength, ...set('template') });
       const variables = node('div', 'we-variables');
       for (const name of TEXT_VARIABLES) {
@@ -197,36 +357,24 @@ export function createInspector({ root, onElement, onLayout, onAlign }) {
         field(t('widgetEditor.textAlignTitle'), selectInput(element.align, ALIGNMENTS.map((value) => [value, t(`widgetEditor.textAlign.${value}`)]), set('align'))),
         field(t('widgetEditor.textValignTitle'), selectInput(element.valign, VERTICAL_ALIGNMENTS.map((value) => [value, t(`widgetEditor.textValign.${value}`)]), set('valign'))),
       );
-      section.append(field(t('widgetEditor.template'), template), variables, grid, field(t('widgetEditor.color'), colorInput(element.color, set('color'))));
-      return section;
+      return [section(t('widgetEditor.textTitle'), field(t('widgetEditor.template'), template), variables, grid, field(t('widgetEditor.color'), colorInput(element.color, set('color'))))];
     },
 
     progress({ element, set }) {
-      const section = node('div', 'we-section');
-      section.append(
-        node('h3', '', t('widgetEditor.progressTitle')),
+      return [section(
+        t('widgetEditor.progressTitle'),
         field(t('widgetEditor.color'), colorInput(element.color, set('color'))),
         field(t('widgetEditor.track'), colorInput(element.track, set('track'))),
         field(t('widgetEditor.radius'), numberInput(element.radius, LIMITS.radius, set('radius'))),
-      );
-      return section;
+      )];
     },
 
     disc({ element, set }) {
-      const section = node('div', 'we-section');
-      section.append(node('h3', '', t('widgetEditor.discTitle')), field(t('widgetEditor.accent'), colorInput(element.accent, set('accent'))));
-      return section;
+      return [section(t('widgetEditor.discTitle'), field(t('widgetEditor.accent'), colorInput(element.accent, set('accent'))))];
     },
 
-    box({ element, set }) {
-      const section = node('div', 'we-section');
-      section.append(
-        node('h3', '', t('widgetEditor.boxTitle')),
-        field(t('widgetEditor.fill'), colorInput(element.fill.color, bind((value, options) => onElement(value === undefined ? {} : { fill: { ...element.fill, color: value } }, options)))),
-        field(t('widgetEditor.radius'), numberInput(element.shape.radius, LIMITS.radius, bind((value, options) => onElement(value === undefined ? {} : { shape: { ...element.shape, radius: value } }, options)))),
-      );
-      return section;
-    },
+    box: (context) => surfaceSections(context),
+    image: (context) => surfaceSections(context),
   };
 
   return { render };

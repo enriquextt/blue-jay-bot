@@ -52,7 +52,12 @@
     "queueEmpty": "No hay nada en la cola ni sonando.",
     "messageInvalid": "El texto no es válido: máximo 400 caracteres y solo las variables que ya tiene ese mensaje.",
     "layoutInvalid": "El layout del widget no es válido o ya hay demasiados.",
-    "layoutNotFound": "Ese layout del widget ya no existe."
+    "layoutNotFound": "Ese layout del widget ya no existe.",
+    "assetNotFound": "Esa imagen ya no existe.",
+    "assetInUse": "Esa imagen la usa algún layout: quítala de ellos antes de borrarla.",
+    "assetInvalid": "El archivo no es una imagen admitida (PNG, JPEG, WebP o GIF).",
+    "assetTooLarge": "La imagen pesa más de 2 MB.",
+    "assetLimit": "Ya hay demasiadas imágenes (50) o ocupan demasiado (50 MB)."
   },
   "notices": {
     "skippedUnavailable": "Saltada, no disponible: {{title}}",
@@ -262,7 +267,8 @@
       "text": "Texto",
       "progress": "Barra de progreso",
       "disc": "Disco",
-      "box": "Caja"
+      "box": "Caja",
+      "image": "Imagen"
     },
     "layoutTitle": "Layout",
     "name": "Nombre",
@@ -321,7 +327,78 @@
     "discTitle": "Disco",
     "accent": "Color del centro",
     "boxTitle": "Caja",
-    "fill": "Relleno"
+    "fill": "Relleno",
+    "shapeSection": "Forma",
+    "shapeTitle": "Forma",
+    "variantTitle": "Orientación",
+    "shape": {
+      "rect": "Rectángulo",
+      "ellipse": "Elipse o círculo",
+      "semicircle": "Semicírculo",
+      "triangle-corner": "Triángulo de esquina",
+      "triangle": "Triángulo",
+      "diamond": "Rombo",
+      "parallelogram": "Paralelogramo",
+      "hexagon": "Hexágono"
+    },
+    "variant": {
+      "semicircle": {
+        "top": "Curva hacia arriba",
+        "bottom": "Curva hacia abajo",
+        "left": "Curva hacia la izquierda",
+        "right": "Curva hacia la derecha"
+      },
+      "triangle-corner": {
+        "tl": "Esquina superior izquierda",
+        "tr": "Esquina superior derecha",
+        "bl": "Esquina inferior izquierda",
+        "br": "Esquina inferior derecha"
+      },
+      "triangle": {
+        "top": "Punta hacia arriba",
+        "bottom": "Punta hacia abajo",
+        "left": "Punta hacia la izquierda",
+        "right": "Punta hacia la derecha"
+      },
+      "parallelogram": {
+        "right": "Inclinado a la derecha",
+        "left": "Inclinado a la izquierda"
+      }
+    },
+    "fillSection": "Relleno",
+    "fillType": "Tipo de relleno",
+    "fillKind": {
+      "none": "Sin relleno",
+      "solid": "Color",
+      "linear": "Degradado lineal",
+      "radial": "Degradado radial",
+      "image": "Imagen"
+    },
+    "angle": "Ángulo (°)",
+    "stops": "Colores del degradado",
+    "stopOffset": "Posición del color (%)",
+    "addStop": "Añadir color",
+    "removeStop": "Quitar color",
+    "image": "Imagen",
+    "imageNone": "(ninguna)",
+    "upload": "Subir imagen…",
+    "deleteImage": "Borrar imagen",
+    "fit": "Ajuste",
+    "fitKind": {
+      "cover": "Cubrir",
+      "contain": "Contener",
+      "stretch": "Estirar"
+    },
+    "borderSection": "Borde",
+    "borderWidth": "Grosor del borde",
+    "borderStyle": "Estilo",
+    "borderKind": {
+      "solid": "Continuo",
+      "dashed": "Discontinuo"
+    },
+    "shadowSection": "Sombra",
+    "shadowEnabled": "Activar sombra",
+    "shadowBlur": "Desenfoque"
   },
   "widget": {
     "requestedBy": "pedida por {{user}}",

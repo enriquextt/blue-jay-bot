@@ -19,8 +19,9 @@ import { PlaybackQueue } from './queue/playback-queue.js';
 import { Settings } from './settings/settings.js';
 import { PlayerState } from './state/player-state.js';
 import { trackKey } from './tracks.js';
+import { AssetError, ASSET_LIMITS, WidgetAssets } from './widget/assets.js';
 import { WidgetLayouts } from './widget/layouts.js';
-import { createChannel } from './ws/channel.js';
+import { createChannel, LOOPBACK_ADDRESSES } from './ws/channel.js';
 import { fetchPlaylistVideos, fetchVideoInfo, fetchVideoTitle, searchVideoId } from './youtube/youtube.js';
 
 const ROOT_DIR = fileURLToPath(new URL('..', import.meta.url));
@@ -39,6 +40,7 @@ export async function createServer({
   blacklistPath = null,
   libraryConfigPath = null,
   databasePath = null,
+  widgetAssetsPath = null,
   watchLibrary = true,
   readTags,
   log = () => {},
@@ -61,7 +63,8 @@ export async function createServer({
   const playerState = new PlayerState({ kv });
   const locales = await loadLocales();
   const messages = new Messages({ kv, locales });
-  const widgetLayouts = new WidgetLayouts({ kv });
+  const widgetAssets = new WidgetAssets({ kv, dir: widgetAssetsPath });
+  const widgetLayouts = new WidgetLayouts({ kv, assets: widgetAssets });
 
   const queue = new PlaybackQueue({
     fallback: () => baseList.next(),
@@ -125,6 +128,45 @@ export async function createServer({
     return reply.sendFile(relPath, library.root);
   });
 
+  // Imágenes del widget. Se suben con el cuerpo en bruto (sin `multipart`, para no añadir dependencias) y solo desde el
+  // propio equipo; el tipo se decide por los bytes del archivo, no por lo que declare quien lo sube.
+  app.addContentTypeParser(['image/png', 'image/jpeg', 'image/gif', 'image/webp'], { parseAs: 'buffer', bodyLimit: ASSET_LIMITS.imageBytes }, (request, body, done) => done(null, body));
+
+  app.post('/api/widget/assets', { bodyLimit: ASSET_LIMITS.imageBytes }, async (request, reply) => {
+    // Una página de otro sitio no puede subir archivos: el navegador manda su origen y tiene que ser el nuestro.
+    const { origin } = request.headers;
+    if (!LOOPBACK_ADDRESSES.has(request.ip) || (origin && origin !== `http://${request.headers.host}`)) {
+      return reply.code(403).send({ error: 'localOnly' });
+    }
+
+    let name = request.headers['x-filename'];
+    try {
+      name = typeof name === 'string' ? decodeURIComponent(name) : null;
+    } catch {
+      name = null;
+    }
+
+    try {
+      return await widgetAssets.add(request.body, name);
+    } catch (error) {
+      if (!(error instanceof AssetError)) throw error;
+      return reply.code(error.code === 'limit' ? 409 : error.code === 'tooLarge' ? 413 : 400).send({ error: error.code });
+    }
+  });
+
+  // El id es un hash: el contenido de una URL no cambia, así que se puede guardar en caché para siempre.
+  app.get('/widget-assets/:id', async (request, reply) => {
+    const asset = await widgetAssets.read(request.params.id);
+    if (!asset) return reply.code(404).send();
+
+    return reply
+      .type(asset.type)
+      .header('X-Content-Type-Options', 'nosniff')
+      .header('Content-Security-Policy', "default-src 'none'; sandbox")
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .send(asset.buffer);
+  });
+
   await app.listen({ host, port });
 
   const youtube = youtubeCredentialsPath ? await loadCredentials(youtubeCredentialsPath) : null;
@@ -147,6 +189,7 @@ export async function createServer({
     settings,
     messages,
     widgetLayouts,
+    widgetAssets,
     language: LOCALES.includes(language) ? language : 'es',
     getState,
     fetchTitle,

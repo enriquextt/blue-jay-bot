@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { LIMITS } from '../../public/js/widget/catalog.js';
 import { CLASSIC_ID, TEMPLATES } from '../../public/js/widget/templates.js';
-import { normalizeLayout } from './layout.js';
+import { normalizeLayout, usedAssets } from './layout.js';
 
 const LAYOUTS_KEY = 'widget.layouts';
 const ACTIVE_KEY = 'widget.active';
@@ -13,18 +13,26 @@ const BUILTIN = TEMPLATES.map((template) => ({ id: template.id, ...normalizeLayo
 // Layouts del widget: los de serie (solo lectura) y los del usuario (en la tabla `kv`), con cuál se usa por defecto.
 export class WidgetLayouts extends EventEmitter {
   #kv;
+  #assets;
   #custom;
   #active;
 
-  constructor({ kv }) {
+  // `assets` (opcional) es quien guarda las imágenes: al guardar un layout se comprueba que las que usa existen.
+  constructor({ kv, assets = null }) {
     super();
     this.#kv = kv;
+    this.#assets = assets;
     this.#custom = this.#read();
     this.#active = this.#readActive();
   }
 
   list() {
     return structuredClone([...BUILTIN, ...this.#custom]);
+  }
+
+  // Ids de las imágenes que usa algún layout.
+  usedAssets() {
+    return new Set(this.list().flatMap(usedAssets));
   }
 
   activeId() {
@@ -43,7 +51,7 @@ export class WidgetLayouts extends EventEmitter {
   // Crea un layout o, si `id` es el de uno propio, lo reemplaza. Un id desconocido o de serie crea uno nuevo (guardar como).
   // Devuelve el layout guardado, o null si no es válido o ya hay demasiados.
   save({ id = null, ...input }) {
-    const layout = normalizeLayout(input);
+    const layout = normalizeLayout(input, { hasAsset: this.#assets ? (assetId) => this.#assets.has(assetId) : null });
     if (!layout) return null;
 
     const index = this.#custom.findIndex((item) => item.id === id);

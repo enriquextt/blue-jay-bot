@@ -35,7 +35,7 @@ test('normalizeLayout descarta campos desconocidos y no deja pasar CSS ni valore
   assert.ok(clean);
   assert.equal('extra' in clean, false);
   assert.equal('evil' in clean.elements[0], false);
-  assert.deepEqual(clean.elements[0].shape, { type: 'rect', radius: 4 });
+  assert.deepEqual(clean.elements[0].shape, { type: 'rect', radius: 4, variant: null });
 
   const invalid = [
     layout({ name: '   ' }),

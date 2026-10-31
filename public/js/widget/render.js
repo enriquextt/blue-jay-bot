@@ -1,4 +1,5 @@
 import { fillTemplate } from './format.js';
+import { buildSurface } from './surface.js';
 
 const JUSTIFY = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
 
@@ -18,12 +19,9 @@ const DISC_MARKUP = `
 
 // Cada constructor devuelve el nodo del elemento y, si lo necesita, cómo actualizarlo con los datos de la canción.
 const BUILDERS = {
-  box(element) {
-    const node = document.createElement('div');
-    node.style.background = element.fill.color;
-    node.style.borderRadius = `${element.shape.radius}px`;
-    return { node };
-  },
+  box: (element) => ({ node: buildSurface(element) }),
+
+  image: (element) => ({ node: buildSurface(element) }),
 
   text(element) {
     const node = document.createElement('div');

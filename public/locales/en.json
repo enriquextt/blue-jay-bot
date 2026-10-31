@@ -52,7 +52,12 @@
     "queueEmpty": "Nothing is playing or queued.",
     "messageInvalid": "The text is not valid: 400 characters at most and only the variables that message already has.",
     "layoutInvalid": "The widget layout is not valid, or there are too many.",
-    "layoutNotFound": "That widget layout no longer exists."
+    "layoutNotFound": "That widget layout no longer exists.",
+    "assetNotFound": "That image no longer exists.",
+    "assetInUse": "A layout uses that image: remove it from them before deleting it.",
+    "assetInvalid": "The file is not a supported image (PNG, JPEG, WebP or GIF).",
+    "assetTooLarge": "The image is larger than 2 MB.",
+    "assetLimit": "There are too many images (50) or they take too much space (50 MB)."
   },
   "notices": {
     "skippedUnavailable": "Skipped, unavailable: {{title}}",
@@ -262,7 +267,8 @@
       "text": "Text",
       "progress": "Progress bar",
       "disc": "Disc",
-      "box": "Box"
+      "box": "Box",
+      "image": "Image"
     },
     "layoutTitle": "Layout",
     "name": "Name",
@@ -321,7 +327,78 @@
     "discTitle": "Disc",
     "accent": "Center color",
     "boxTitle": "Box",
-    "fill": "Fill"
+    "fill": "Fill",
+    "shapeSection": "Shape",
+    "shapeTitle": "Shape",
+    "variantTitle": "Orientation",
+    "shape": {
+      "rect": "Rectangle",
+      "ellipse": "Ellipse or circle",
+      "semicircle": "Semicircle",
+      "triangle-corner": "Corner triangle",
+      "triangle": "Triangle",
+      "diamond": "Diamond",
+      "parallelogram": "Parallelogram",
+      "hexagon": "Hexagon"
+    },
+    "variant": {
+      "semicircle": {
+        "top": "Curves up",
+        "bottom": "Curves down",
+        "left": "Curves left",
+        "right": "Curves right"
+      },
+      "triangle-corner": {
+        "tl": "Top left corner",
+        "tr": "Top right corner",
+        "bl": "Bottom left corner",
+        "br": "Bottom right corner"
+      },
+      "triangle": {
+        "top": "Points up",
+        "bottom": "Points down",
+        "left": "Points left",
+        "right": "Points right"
+      },
+      "parallelogram": {
+        "right": "Leans right",
+        "left": "Leans left"
+      }
+    },
+    "fillSection": "Fill",
+    "fillType": "Fill type",
+    "fillKind": {
+      "none": "No fill",
+      "solid": "Color",
+      "linear": "Linear gradient",
+      "radial": "Radial gradient",
+      "image": "Image"
+    },
+    "angle": "Angle (°)",
+    "stops": "Gradient colors",
+    "stopOffset": "Color position (%)",
+    "addStop": "Add color",
+    "removeStop": "Remove color",
+    "image": "Image",
+    "imageNone": "(none)",
+    "upload": "Upload image…",
+    "deleteImage": "Delete image",
+    "fit": "Fit",
+    "fitKind": {
+      "cover": "Cover",
+      "contain": "Contain",
+      "stretch": "Stretch"
+    },
+    "borderSection": "Border",
+    "borderWidth": "Border width",
+    "borderStyle": "Style",
+    "borderKind": {
+      "solid": "Solid",
+      "dashed": "Dashed"
+    },
+    "shadowSection": "Shadow",
+    "shadowEnabled": "Enable shadow",
+    "shadowBlur": "Blur"
   },
   "widget": {
     "requestedBy": "requested by {{user}}",

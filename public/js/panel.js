@@ -596,7 +596,7 @@ async function start() {
     createHistoryView({ send }),
     createPlaylistsView({ send }),
     createMessagesView({ send }),
-    createWidgetEditorView({ send }),
+    createWidgetEditorView({ send, showNotice }),
   );
   setupIcons();
   setupEvents();

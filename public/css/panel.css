@@ -896,3 +896,24 @@ input.number:disabled {
   padding: 4px 8px;
   font-size: 0.8rem;
 }
+
+.we-stop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.we-stop .we-color {
+  flex: 1;
+  min-width: 0;
+}
+
+.we-stop > input.number {
+  flex: none;
+  width: 4.5em;
+}
+
+.we-stop button {
+  flex: none;
+  padding: 6px 10px;
+}

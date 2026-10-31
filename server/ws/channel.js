@@ -15,7 +15,7 @@ const LIBRARY_PAGE_SIZE = 50;
 const MAX_SECONDS = 24 * 60 * 60;
 const WIDGET_TEST_SECONDS = 8;
 const WIDGET_SHOW_SECONDS = 10;
-const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+export const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
 export function createChannel({
   wss,
@@ -28,6 +28,7 @@ export function createChannel({
   settings,
   messages,
   widgetLayouts,
+  widgetAssets,
   language,
   getState,
   fetchTitle,
@@ -97,6 +98,8 @@ export function createChannel({
   const messagesMessage = () => ({ type: 'messages', data: { language, items: messages.list() } });
   const widgetLayoutsMessage = () => ({ type: 'widget.layouts', data: { active: widgetLayouts.activeId(), layouts: widgetLayouts.list() } });
 
+  const widgetAssetsMessage = () => ({ type: 'widget.assets', data: widgetAssets.list() });
+
   function sendWidgetLayout(socket) {
     send(socket, { type: 'widget.layout', data: widgetLayouts.resolve(widgetLayoutIds.get(socket)) });
   }
@@ -106,6 +109,7 @@ export function createChannel({
   playlists.on('change', () => broadcast(playlistsMessage()));
   settings.on('change', () => broadcast(settingsMessage()));
   messages.on('change', () => broadcast(messagesMessage()));
+  widgetAssets.on('change', () => broadcast(widgetAssetsMessage()));
   widgetLayouts.on('change', () => {
     broadcast(widgetLayoutsMessage());
     for (const socket of widgets) sendWidgetLayout(socket);
@@ -331,6 +335,15 @@ export function createChannel({
         return;
       }
 
+      case 'widget.asset.delete': {
+        if (!isId(command.id)) return sendError(socket, 'errors.invalidMessage');
+        if (!widgetAssets.has(command.id)) return sendError(socket, 'errors.assetNotFound');
+        if (widgetLayouts.usedAssets().has(command.id)) return sendError(socket, 'errors.assetInUse');
+
+        await widgetAssets.remove(command.id);
+        return;
+      }
+
       case 'widget.test': {
         // Tarjeta de prueba: solo la ve el widget y no toca la cola ni el historial.
         return broadcastWidgets({ type: 'widget.test', data: { duration: WIDGET_TEST_SECONDS } });
@@ -511,6 +524,7 @@ export function createChannel({
     send(socket, settingsMessage());
     send(socket, messagesMessage());
     send(socket, widgetLayoutsMessage());
+    send(socket, widgetAssetsMessage());
     send(socket, { type: 'history.changed' });
 
     socket.on('message', (raw) => {

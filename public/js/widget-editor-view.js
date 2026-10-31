@@ -31,7 +31,7 @@ const plain = ({ name, canvas, showSeconds, idleOpacity, elements }) => ({ name,
 
 // Editor del widget: capas, lienzo y propiedades. Cada layout tiene su propio borrador y su propio historial de
 // deshacer mientras el panel está abierto, de modo que cambiar de layout no pierde lo que no se ha guardado.
-export function createWidgetEditorView({ send }) {
+export function createWidgetEditorView({ send, showNotice }) {
   const el = {
     layout: document.querySelector('#we-layout'),
     activate: document.querySelector('#we-activate'),
@@ -54,6 +54,7 @@ export function createWidgetEditorView({ send }) {
   };
 
   let layouts = [];
+  let assets = [];
   let activeId = null;
   let selectedId = null;
   let selectedElementId = null;
@@ -81,16 +82,24 @@ export function createWidgetEditorView({ send }) {
 
   const inspector = createInspector({
     root: el.inspector,
-    onElement: (patch, { commit: done }) => {
-      session().draft = updateElement(session().draft, selectedElementId, patch);
+    onElement: (change, { commit: done }) => {
+      applyToElement(change);
       if (done) commit({ inspector: false });
       else refresh({ inspector: false, layers: false });
     },
-    onLayout: (patch, { commit: done }) => {
-      session().draft = { ...session().draft, ...patch };
+    onLayout: (change, { commit: done }) => {
+      const { draft } = session();
+      session().draft = { ...draft, ...(typeof change === 'function' ? change(draft) : change) };
       if (done) commit();
       else refresh({ inspector: false, layers: false });
     },
+    // Cambios que alteran los campos que se muestran: se anotan y se vuelve a pintar el inspector.
+    onRebuild: (change) => {
+      applyToElement(change);
+      commit();
+    },
+    onUpload: (file) => uploadImage(file),
+    onDeleteAsset: (id) => send({ type: 'widget.asset.delete', id }),
     onAlign: (target) => {
       session().draft = alignElement(session().draft, selectedElementId, target);
       commit();
@@ -108,6 +117,58 @@ export function createWidgetEditorView({ send }) {
       commit();
     },
   });
+
+  // `change` es un objeto con campos nuevos o una función que lo calcula con el elemento tal como está ahora.
+  function applyToElement(change) {
+    const current = session().draft.elements.find((element) => element.id === selectedElementId);
+    if (!current) return;
+
+    session().draft = updateElement(session().draft, current.id, typeof change === 'function' ? change(current) : change);
+  }
+
+  const UPLOAD_ERRORS = { 400: 'errors.assetInvalid', 403: 'errors.localOnly', 409: 'errors.assetLimit', 413: 'errors.assetTooLarge', 415: 'errors.assetInvalid' };
+
+  // Sube una imagen y la deja elegida en el elemento seleccionado.
+  async function uploadImage(file) {
+    let response;
+    try {
+      response = await fetch('/api/widget/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': file.type, 'X-Filename': encodeURIComponent(file.name) },
+        body: file,
+      });
+    } catch {
+      showNotice(t('errors.serverError'), 'error');
+      return;
+    }
+    if (!response.ok) {
+      showNotice(t(UPLOAD_ERRORS[response.status] ?? 'errors.serverError'), 'error');
+      return;
+    }
+
+    const { id } = await response.json();
+    // El servidor avisa de la lista nueva con `widget.assets`; mientras llega, se añade aquí para poder elegirla.
+    if (!assets.some((asset) => asset.id === id)) assets = [...assets, { id, name: file.name, type: file.type, size: file.size }];
+    if (session()) {
+      applyToElement((element) => (element.fill ? { fill: { type: 'image', asset: id, fit: element.fill.type === 'image' ? element.fill.fit : 'cover' } } : {}));
+      commit();
+    }
+  }
+
+  // Una imagen borrada no puede quedar elegida en un borrador: al guardar el servidor lo rechazaría.
+  function pruneAssets() {
+    const known = new Set(assets.map((asset) => asset.id));
+    for (const current of sessions.values()) {
+      current.draft = {
+        ...current.draft,
+        elements: current.draft.elements.map((element) => (
+          element.fill?.type === 'image' && element.fill.asset && !known.has(element.fill.asset)
+            ? { ...element, fill: { ...element.fill, asset: null } }
+            : element
+        )),
+      };
+    }
+  }
 
   const session = () => sessions.get(selectedId) ?? null;
   const selectedLayout = () => layouts.find((layout) => layout.id === selectedId) ?? null;
@@ -270,7 +331,7 @@ export function createWidgetEditorView({ send }) {
     el.add.disabled = !canAddElement(draft);
     canvas.show(draft, selectedElementId, sampleView());
     if (layers) el.layers.replaceChildren(...[...draft.elements].reverse().map((element) => layerRow(element, draft)));
-    if (inspect) inspector.render({ layout: draft, element: selected });
+    if (inspect) inspector.render({ layout: draft, element: selected, assets });
   }
 
   function render() {
@@ -366,6 +427,10 @@ export function createWidgetEditorView({ send }) {
           selectedId = activeId;
           selectedElementId = null;
         }
+        refresh();
+      } else if (message.type === 'widget.assets') {
+        assets = message.data;
+        pruneAssets();
         refresh();
       } else if (message.type === 'widget.layout.saved' && pending) {
         const { fromId, discardOriginal } = pending;
