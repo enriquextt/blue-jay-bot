@@ -2,7 +2,7 @@
 // Aplica un mapeo { "archivo.mp3": { campos } } a las etiquetas ID3 y verifica la escritura.
 // Uso: node tools/apply-tags.mjs <mapping.json> <carpeta> [--dry]
 import NodeID3 from 'node-id3';
-import { buildTags, FIELDS, loadMapping, readTags, resolveMp3 } from './id3-common.mjs';
+import { buildTags, FIELDS, loadMapping, readTags, resolveMp3, sameValue } from './id3-common.mjs';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -22,7 +22,7 @@ async function main() {
     if (dry) continue;
 
     const file = resolveMp3(dir, filename);
-    // update() conserva los frames que no están en el mapeo (año, pista, género, carátula).
+    // update() conserva los frames que no están en el mapeo (carátula incluida).
     const result = NodeID3.update(buildTags(entry), file);
     if (result !== true) {
       console.log('  ERROR de escritura:', result?.message ?? result);
@@ -32,7 +32,7 @@ async function main() {
 
     // Verificación: leer de nuevo el archivo y comparar cada campo del mapeo.
     const actual = readTags(file);
-    const mismatches = FIELDS.filter(k => k in entry && (actual[k] ?? null) !== entry[k]);
+    const mismatches = FIELDS.filter(k => k in entry && !sameValue(actual[k], entry[k]));
     if (mismatches.length === 0) {
       console.log('  OK (verificado)');
     } else {

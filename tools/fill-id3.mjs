@@ -5,7 +5,8 @@ import { readdir } from 'fs/promises';
 import { extname, join } from 'path';
 import { readTags } from './id3-common.mjs';
 
-const REPORT_FIELDS = ['title', 'artist', 'album', 'subtitle', 'comment', 'description'];
+// El género se muestra si existe, pero no se marca como faltante: casi ninguna pista lo trae.
+const REPORT_FIELDS = ['title', 'artist', 'album', 'year', 'track', 'subtitle', 'comment', 'description'];
 
 async function main() {
   const args = process.argv.slice(2);
