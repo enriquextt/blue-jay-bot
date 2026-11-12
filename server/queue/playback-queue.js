@@ -2,10 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { toEntry, trackKey } from '../tracks.js';
 
 const DEFAULT_VOLUME = 50;
+const MAX_VOLUME = 100;
+// Puntos de volumen que se suben al pasar de una pista local a un vídeo de YouTube, y se bajan al volver a una local.
+const SOURCE_VOLUME_STEP = 10;
 
 export class PlaybackQueue {
   #items = [];
   #current = null;
+  // Origen de la última pista que sonó; sobrevive a un hueco sin pista para poder compararlo con la siguiente.
+  #lastSource = null;
   #paused = false;
   #volume = DEFAULT_VOLUME;
   #fallback;
@@ -23,6 +28,7 @@ export class PlaybackQueue {
     const revive = ({ requestedBy, origin, ...entry }) => ({ id: randomUUID(), origin, requestedBy, ...toEntry(entry) });
 
     this.#current = current ? revive(current) : null;
+    this.#lastSource = this.#current?.source ?? null;
     this.#items = queue.map(revive);
     if (volume !== null) this.#volume = volume;
   }
@@ -81,7 +87,7 @@ export class PlaybackQueue {
   advance() {
     this.#current = this.#items.shift() ?? this.#nextFromFallback();
     this.#paused = false;
-    if (this.#current) this.#onPlay(this.#current);
+    if (this.#current) this.#started(this.#current);
     return this.#current;
   }
 
@@ -101,7 +107,7 @@ export class PlaybackQueue {
     const { origin, requestedBy } = this.#current;
     this.#current = { id: randomUUID(), origin, requestedBy, ...toEntry(entry) };
     this.#paused = false;
-    this.#onPlay(this.#current);
+    this.#started(this.#current);
     return this.#current;
   }
 
@@ -132,6 +138,17 @@ export class PlaybackQueue {
 
   setVolume(volume) {
     this.#volume = volume;
+  }
+
+  // Una pista empieza a sonar. Si es de otro tipo que la anterior, el volumen sube 10 puntos al pasar a un vídeo
+  // y baja 10 al pasar a una pista local; con el mismo tipo, o sin pista anterior, no cambia.
+  #started(track) {
+    if (this.#lastSource !== null && this.#lastSource !== track.source) {
+      const step = track.source === 'local' ? -SOURCE_VOLUME_STEP : SOURCE_VOLUME_STEP;
+      this.#volume = Math.min(MAX_VOLUME, Math.max(0, this.#volume + step));
+    }
+    this.#lastSource = track.source;
+    this.#onPlay(track);
   }
 
   #nextFromFallback() {

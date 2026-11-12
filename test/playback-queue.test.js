@@ -140,3 +140,92 @@ test('replaceCurrent cambia la pista que suena conservando origen y petición, y
   assert.equal(queue.replaceCurrent(current.id, { videoId: 'd', title: 'D' }), null);
   assert.equal(queue.snapshot().current.title, 'C');
 });
+
+const LOCAL_ID = 'a'.repeat(24);
+const video = (videoId) => ({ source: 'youtube', videoId, title: videoId });
+const local = (title) => ({ source: 'local', localId: LOCAL_ID, title });
+
+test('al pasar de una pista local a un vídeo el volumen sube 10, y al volver a una local baja 10', () => {
+  const queue = new PlaybackQueue();
+  queue.setVolume(50);
+  queue.add(local('L1'));
+  assert.equal(queue.snapshot().volume, 50);
+
+  queue.add(video('v1'));
+  queue.add(local('L2'));
+  queue.advance();
+  assert.equal(queue.snapshot().current.title, 'v1');
+  assert.equal(queue.snapshot().volume, 60);
+
+  queue.advance();
+  assert.equal(queue.snapshot().current.title, 'L2');
+  assert.equal(queue.snapshot().volume, 50);
+});
+
+test('con el mismo tipo que la pista anterior el volumen no cambia', () => {
+  const queue = new PlaybackQueue();
+  queue.setVolume(40);
+  [video('v1'), video('v2'), video('v3')].forEach((track) => queue.add(track));
+  queue.advance();
+  queue.advance();
+  assert.equal(queue.snapshot().volume, 40);
+
+  const other = new PlaybackQueue();
+  other.setVolume(40);
+  [local('A'), local('B'), local('C')].forEach((track) => other.add(track));
+  other.advance();
+  other.advance();
+  assert.equal(other.snapshot().volume, 40);
+});
+
+test('el ajuste de volumen se queda entre 0 y 100', () => {
+  const high = new PlaybackQueue();
+  high.setVolume(97);
+  high.add(local('L'));
+  high.add(video('v1'));
+  high.advance();
+  assert.equal(high.snapshot().volume, 100);
+
+  const low = new PlaybackQueue();
+  low.setVolume(3);
+  low.add(video('v1'));
+  low.add(local('L'));
+  low.advance();
+  assert.equal(low.snapshot().volume, 0);
+});
+
+test('el tipo de la pista anterior se recuerda aunque la cola se vacíe entre medias', () => {
+  const queue = new PlaybackQueue();
+  queue.setVolume(50);
+  queue.add(local('L'));
+  queue.advance();
+  assert.equal(queue.snapshot().current, null);
+
+  queue.add(video('v1'));
+  assert.equal(queue.snapshot().volume, 60);
+});
+
+test('restore toma como pista anterior la que sonaba al cerrar, sin ajustar el volumen', () => {
+  const queue = new PlaybackQueue();
+  queue.restore({
+    current: { source: 'youtube', videoId: 'aaaaaaaaaaa', title: 'A', origin: 'request', requestedBy: null },
+    queue: [{ source: 'local', localId: LOCAL_ID, title: 'L', origin: 'request', requestedBy: null }],
+    volume: 60,
+  });
+  assert.equal(queue.snapshot().volume, 60);
+
+  queue.advance();
+  assert.equal(queue.snapshot().volume, 50);
+});
+
+test('replaceCurrent por una pista local desde un vídeo baja el volumen 10', () => {
+  const queue = new PlaybackQueue();
+  queue.setVolume(50);
+  queue.add(local('L'));
+  queue.add(video('v1'));
+  queue.advance();
+  assert.equal(queue.snapshot().volume, 60);
+
+  queue.replaceCurrent(queue.snapshot().current.id, local('L2'));
+  assert.equal(queue.snapshot().volume, 50);
+});

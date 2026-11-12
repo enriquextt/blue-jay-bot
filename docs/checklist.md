@@ -20,6 +20,7 @@ Leyenda de la columna de decisión:
 - [x] Persistencia de la cola entre recargas — **Mantener** (changelog v1.2.3). Fase 5: la cola, la canción actual, el volumen y el estado START/SHUFFLE se guardan en SQLite (`data/blue-jay.db`) y se recuperan al arrancar; la canción actual vuelve a sonar desde el principio
 - [x] Limpiar cola y guardar cola — **Mantener**. Fase 5: «Limpiar cola» vacía las pendientes sin cortar la que suena; «Guardar cola como lista» guarda la canción actual y la cola en una lista de reproducción nueva
 - [x] Control de volumen del reproductor — **Mantener** (slider en el panel y `!volume` en el chat)
+- [x] Ajuste automático del volumen al cambiar de tipo de pista — **Añadir** (requerimiento nuevo). Al pasar de una pista local a un vídeo de YouTube el volumen sube 10 puntos, y al pasar de un vídeo a una local baja 10; con el mismo tipo que la pista anterior no cambia. Se limita a 0–100 y no es configurable (ver `docs/propuesta.md`)
 - [x] Favoritos (estrella) en la lista base, la cola y la canción actual; aparecen arriba y entran en START/SHUFFLE — **Mantener** (changelog v1.2.3). Marcar una canción de la cola o la actual la añade a la lista base
 
 ## 2. Spotify
